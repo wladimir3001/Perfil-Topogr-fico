@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Wladimir Campos">
+<title>PerfilTopo — Wladimir Campos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080c14;
+    --panel:#0d1220;
+    --panel2:#111827;
+    --border:#1e2d45;
+    --border2:#243552;
+    --accent:#00d4ff;
+    --accent2:#00ff9d;
+    --warn:#ffb300;
+    --red:#ff4757;
+    --txt:#cdd6f4;
+    --txt2:#6b7fa3;
+    --txt3:#3d4f6e;
+    --mono:'Space Mono',monospace;
+    --sans:'DM Sans',sans-serif;
+    --pw:340px;
+  }
+  html,body{height:100%;overflow:hidden}
+  body{display:flex;flex-direction:column;background:var(--bg);color:var(--txt);font-family:var(--sans)}
+
+  /* ── TOPBAR ─────────────────────────────────────────── */
+  #topbar{
+    height:48px;min-height:48px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;
+    padding:0 20px;gap:16px;
+    position:relative;z-index:2000;
+  }
+  #topbar .logo{
+    font-family:var(--mono);font-size:13px;font-weight:700;
+    color:var(--accent);letter-spacing:2px;text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;
+  }
+  #topbar .logo svg{width:20px;height:20px}
+  #topbar .sep{width:1px;height:24px;background:var(--border2)}
+  #topbar .subtitle{font-size:11px;color:var(--txt2);letter-spacing:.5px}
+  #topbar .spacer{flex:1}
+  #topbar .tag{
+    font-family:var(--mono);font-size:10px;
+    background:#0a1628;border:1px solid var(--border2);
+    color:var(--txt2);padding:3px 8px;border-radius:3px;
+    letter-spacing:.5px;
+  }
+  #topbar .author{
+    font-family:var(--mono);font-size:10px;
+    color:var(--txt3);letter-spacing:.5px;
+    padding-right:4px;
+  }
+  #topbar .author b{color:var(--accent2);font-weight:400}
+
+  /* ── LAYOUT PRINCIPAL ───────────────────────────────── */
+  #main{flex:1;display:flex;overflow:hidden}
+
+  /* ── PANEL LATERAL ──────────────────────────────────── */
+  #panel{
+    width:var(--pw);min-width:var(--pw);
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    overflow:hidden;z-index:10;
+  }
+  #panel-body{flex:1;overflow-y:auto;padding:16px}
+  #panel-body::-webkit-scrollbar{width:3px}
+  #panel-body::-webkit-scrollbar-track{background:transparent}
+  #panel-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+  /* ── SECCIONES ──────────────────────────────────────── */
+  .sec{margin-bottom:18px}
+  .sec-title{
+    font-family:var(--mono);font-size:9px;font-weight:700;
+    letter-spacing:2px;color:var(--txt3);text-transform:uppercase;
+    padding-bottom:8px;border-bottom:1px solid var(--border);
+    margin-bottom:12px;display:flex;align-items:center;gap:6px;
+  }
+  .sec-title::before{
+    content:'';display:inline-block;width:6px;height:6px;
+    background:var(--accent);border-radius:50%;flex-shrink:0;
+  }
+
+  /* ── CONTROLES ──────────────────────────────────────── */
+  label{display:block;font-size:11px;color:var(--txt2);margin-bottom:4px;letter-spacing:.3px}
+  input[type=number],input[type=text],select{
+    width:100%;background:#070b12;
+    border:1px solid var(--border2);border-radius:5px;
+    padding:7px 10px;color:var(--txt);
+    font-size:12px;font-family:var(--mono);
+    outline:none;transition:border-color .2s;
+  }
+  input:focus,select:focus{border-color:var(--accent)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ctrl{margin-bottom:10px}
+
+  /* ── BOTONES ────────────────────────────────────────── */
+  .btn{
+    width:100%;padding:9px 14px;border:none;border-radius:5px;
+    font-size:12px;font-family:var(--mono);font-weight:700;
+    letter-spacing:.8px;text-transform:uppercase;
+    cursor:pointer;transition:all .2s;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#0090b0,#006b8a);
+    color:#e0f7ff;
+    box-shadow:0 0 20px rgba(0,212,255,.15);
+    border:1px solid rgba(0,212,255,.3);
+  }
+  .btn-primary:hover{
+    background:linear-gradient(135deg,#00b8d9,#0090b0);
+    box-shadow:0 0 30px rgba(0,212,255,.3);
+    transform:translateY(-1px);
+  }
+  .btn-primary:disabled{
+    background:#1a2535;color:var(--txt3);
+    box-shadow:none;cursor:not-allowed;transform:none;
+    border-color:var(--border);
+  }
+  .btn-success{
+    background:linear-gradient(135deg,#007a4d,#005c3a);
+    color:#d0fff0;
+    border:1px solid rgba(0,255,157,.2);
+  }
+  .btn-success:hover{
+    background:linear-gradient(135deg,#00a066,#007a4d);
+    box-shadow:0 0 20px rgba(0,255,157,.2);
+    transform:translateY(-1px);
+  }
+  .btn-success:disabled{background:#1a2535;color:var(--txt3);box-shadow:none;cursor:not-allowed;transform:none;border-color:var(--border)}
+  .btn-warn{
+    background:linear-gradient(135deg,#7a5500,#5c4000);
+    color:#fff3cc;border:1px solid rgba(255,179,0,.2);
+  }
+  .btn-warn:hover{background:linear-gradient(135deg,#a07000,#7a5500);transform:translateY(-1px)}
+  .btn-sm{padding:6px 10px;font-size:10px;width:auto}
+  .btn-row{display:flex;gap:6px;margin-top:6px}
+
+  /* ── STEP INDICATOR ─────────────────────────────────── */
+  .steps{display:flex;gap:4px;margin-bottom:16px}
+  .step{
+    flex:1;padding:6px;text-align:center;
+    border:1px solid var(--border);border-radius:4px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.5px;
+    color:var(--txt3);background:var(--bg);
+    transition:all .3s;
+  }
+  .step.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+  .step.done{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,157,.06)}
+  .step .sn{font-size:16px;display:block;margin-bottom:2px}
+
+  /* ── PROGRESS ───────────────────────────────────────── */
+  #prog-wrap{padding:0 0 4px;display:none}
+  #prog-bar-outer{height:3px;background:#0a1628;border-radius:2px;overflow:hidden}
+  #prog-bar-inner{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s}
+  #prog-txt{font-size:10px;color:var(--txt2);margin-top:4px;min-height:14px;font-family:var(--mono)}
+
+  /* ── STATUS ─────────────────────────────────────────── */
+  #status-bar{
+    padding:8px 16px;background:#060910;
+    border-top:1px solid var(--border);
+    font-size:10px;font-family:var(--mono);
+    color:var(--txt2);min-height:28px;
+  }
+  #status-bar.ok{color:var(--accent2)}
+  #status-bar.err{color:var(--red)}
+  #status-bar.warn{color:var(--warn)}
+
+  /* ── STATS ──────────────────────────────────────────── */
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .stat-box{
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:5px;padding:8px 10px;
+  }
+  .stat-box .sv{
+    font-family:var(--mono);font-size:16px;font-weight:700;
+    color:var(--accent);display:block;
+  }
+  .stat-box .sl{font-size:10px;color:var(--txt2);margin-top:1px}
+
+  /* ── MAPA + CONTENIDO DERECHO ───────────────────────── */
+  #right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  #map-wrap{flex:1;position:relative;min-height:200px}
+  #map{width:100%;height:100%}
+
+  /* ── RESIZEABLE DIVIDER ─────────────────────────────── */
+  #divider{
+    height:5px;background:var(--border);cursor:row-resize;
+    position:relative;flex-shrink:0;
+    transition:background .2s;
+  }
+  #divider:hover,#divider.dragging{background:var(--accent)}
+  #divider::after{
+    content:'⋯';position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    color:var(--txt3);font-size:14px;pointer-events:none;
+  }
+
+  /* ── PANEL PERFIL ───────────────────────────────────── */
+  #perfil-wrap{
+    height:240px;min-height:100px;max-height:60vh;
+    background:var(--panel);border-top:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  #perfil-header{
+    padding:8px 16px;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:10px;flex-shrink:0;
+  }
+  #perfil-header .ph-title{
+    font-family:var(--mono);font-size:10px;font-weight:700;
+    color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;
+  }
+  #perfil-header .spacer{flex:1}
+  #perfil-header .ph-info{font-size:10px;color:var(--txt2);font-family:var(--mono)}
+  #canvas-wrap{flex:1;position:relative;overflow:hidden}
+  #perfil-canvas{width:100%;height:100%;display:block}
+  #perfil-empty{
+    position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;flex-direction:column;gap:8px;
+    color:var(--txt3);font-family:var(--mono);font-size:11px;
+    pointer-events:none;
+  }
+  #perfil-empty svg{opacity:.2;width:48px;height:48px}
+
+  /* ── HINT MAPA ──────────────────────────────────────── */
+  #hint{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    z-index:500;text-align:center;pointer-events:none;
+  }
+  #hint-inner{
+    background:rgba(8,12,20,.85);backdrop-filter:blur(10px);
+    border:1px solid var(--border2);border-radius:10px;
+    padding:24px 32px;
+  }
+  #hint-inner .hi{font-size:40px;margin-bottom:10px;display:block}
+  #hint-inner p{font-size:12px;color:var(--txt2);line-height:1.8;font-family:var(--mono)}
+  #hint-inner strong{color:var(--txt)}
+  #hint.hidden{display:none}
+
+  /* ── CAPAS ──────────────────────────────────────────── */
+  #layer-btn{
+    position:absolute;top:10px;right:10px;z-index:1000;
+    display:flex;gap:4px;flex-direction:column;
+  }
+  .layer-opt{
+    background:rgba(8,12,20,.9);backdrop-filter:blur(6px);
+    border:1px solid var(--border2);border-radius:5px;
+    padding:5px 10px;font-family:var(--mono);font-size:10px;
+    color:var(--txt2);cursor:pointer;transition:all .2s;
+    letter-spacing:.5px;
+  }
+  .layer-opt.active,.layer-opt:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ── TOOLTIP PERFIL ─────────────────────────────────── */
+  #perfil-tooltip{
+    position:absolute;pointer-events:none;
+    background:rgba(8,12,20,.95);border:1px solid var(--accent);
+    border-radius:5px;padding:6px 10px;
+    font-family:var(--mono);font-size:10px;color:var(--txt);
+    display:none;white-space:nowrap;z-index:100;
+  }
+
+  /* ── BANNER FILE:// ──────────────────────────────────── */
+  #banner{
+    position:fixed;top:0;left:0;right:0;z-index:9999;
+    background:linear-gradient(135deg,#4c1d95,#312e81);
+    padding:10px 20px;display:flex;align-items:center;gap:12px;
+    box-shadow:0 4px 20px rgba(0,0,0,.5);
+  }
+  #banner.hidden{display:none}
+  #banner .bt{flex:1;font-family:var(--mono);font-size:11px;color:#c4b5fd}
+  #banner .bt strong{color:#fff;display:block;margin-bottom:2px}
+  #banner .bc{
+    background:#1e1b4b;border:1px solid #6d28d9;border-radius:4px;
+    padding:4px 10px;font-family:var(--mono);font-size:11px;color:#a5b4fc;
+    cursor:pointer;white-space:nowrap;
+  }
+  #banner .bx{background:none;border:none;color:#c4b5fd;font-size:18px;cursor:pointer}
+  body.with-banner #topbar{margin-top:42px}
+
+  /* Leaflet overrides */
+  .leaflet-container{background:#080c14!important}
+  /* Ocultar toolbar y tooltip flotante de LeafletDraw: usamos nuestros propios controles */
+  .leaflet-draw.leaflet-control{display:none!important}
+  .leaflet-draw-tooltip{display:none!important}
+  .leaflet-control-zoom a{
+    background:rgba(8,12,20,.9)!important;color:var(--txt)!important;
+    border-color:var(--border)!important;
+  }
+  .leaflet-control-zoom a:hover{background:var(--panel2)!important;color:var(--accent)!important}
+  .leaflet-draw-guide-dash{border-color:var(--accent)!important}
+
+  /* ── BOTONES DE ACCIÓN DE DIBUJO (panel) ─────────────── */
+  #draw-actions{display:none;margin-top:6px}
+  #draw-actions.active{display:block}
+  .draw-hint{
+    font-family:var(--mono);font-size:10px;color:var(--accent);
+    background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);
+    border-radius:5px;padding:7px 9px;margin-bottom:8px;
+    line-height:1.5;letter-spacing:.2px;
+  }
+  .draw-hint b{color:var(--txt)}
+  .draw-counter{
+    font-family:var(--mono);font-size:10px;color:var(--txt2);
+    text-align:center;padding:4px 0 8px;
+  }
+  .draw-counter b{color:var(--accent2);font-size:12px}
+  .btn-draw-action{
+    width:100%;padding:8px 10px;margin-bottom:6px;
+    border:1px solid var(--border2);border-radius:5px;
+    font-family:var(--mono);font-size:11px;font-weight:700;
+    letter-spacing:.6px;text-transform:uppercase;
+    cursor:pointer;transition:all .15s;
+    background:var(--bg);color:var(--txt);
+  }
+  .btn-draw-action:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .btn-draw-action:disabled{opacity:.35;cursor:not-allowed}
+  .btn-draw-action.finish{border-color:rgba(0,255,157,.35);color:var(--accent2)}
+  .btn-draw-action.finish:hover:not(:disabled){background:rgba(0,255,157,.08);border-color:var(--accent2)}
+  .btn-draw-action.cancel{border-color:rgba(255,71,87,.3);color:#ff8080}
+  .btn-draw-action.cancel:hover{background:rgba(255,71,87,.08);border-color:var(--red)}
+
+  /* ── CHECKBOXES OSM ───────────────────────────────── */
+  .osm-chk{
+    appearance:none;-webkit-appearance:none;
+    width:14px;height:14px;border:1px solid var(--border2);
+    border-radius:3px;background:var(--bg);cursor:pointer;
+    position:relative;flex-shrink:0;
+  }
+  .osm-chk:checked{background:var(--accent);border-color:var(--accent)}
+  .osm-chk:checked::after{
+    content:'✓';position:absolute;top:-2px;left:1px;
+    color:#000;font-size:11px;font-weight:700;
+  }
+
+  /* ── LEYENDA OSM EN PERFIL ────────────────────────── */
+  #osm-legend{
+    position:absolute;top:6px;right:10px;
+    display:flex;gap:10px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:9px;
+    background:rgba(8,12,20,.85);
+    border:1px solid var(--border);
+    border-radius:4px;padding:4px 8px;
+    pointer-events:none;z-index:10;
+    max-width:60%;justify-content:flex-end;
+  }
+  #osm-legend.hidden{display:none}
+  #osm-legend .li{display:flex;align-items:center;gap:4px;color:var(--txt2)}
+  #osm-legend .li .sw{width:8px;height:8px;border-radius:50%}
+
+  /* marker de quiebre */
+  .quiebre-marker{
+    width:10px;height:10px;margin:-5px 0 0 -5px;
+    background:var(--warn);border:2px solid var(--bg);
+    border-radius:50%;
+  }
+  .quiebre-marker.inicio{background:var(--accent2);width:14px;height:14px;margin:-7px 0 0 -7px}
+  .quiebre-marker.fin{background:var(--red);width:14px;height:14px;margin:-7px 0 0 -7px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3,17 7,11 11,14 15,7 21,7"/>
+      <line x1="3" y1="21" x2="21" y2="21"/>
+    </svg>
+    PerfilTopo
+  </div>
+  <div class="sep"></div>
+  <span class="subtitle">Perfil Topográfico por Línea</span>
+  <div class="spacer"></div>
+  <span class="author">Creado por <b>Wladimir Campos</b></span>
+  <span class="tag">v1.0</span>
+</div>
+
+<!-- BANNER FILE:// -->
+<div id="banner" class="hidden">
+  <div class="bt">
+    <strong>⚠ Abre desde localhost para que funcionen las elevaciones</strong>
+    python -m http.server 8080 → abre localhost:8080/perfil_topo.html
+  </div>
+  <div class="bc" onclick="navigator.clipboard&&navigator.clipboard.writeText('python -m http.server 8080')">📋 Copiar</div>
+  <button class="bx" onclick="document.getElementById('banner').classList.add('hidden')">✕</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- PANEL -->
+  <div id="panel">
+    <div id="panel-body">
+
+      <!-- STEPS -->
+      <div class="steps">
+        <div class="step active" id="step1"><span class="sn">①</span>DIBUJAR</div>
+        <div class="step" id="step2"><span class="sn">②</span>MUESTREAR</div>
+        <div class="step" id="step3"><span class="sn">③</span>EXPORTAR</div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div class="sec">
+        <div class="sec-title">Configuración</div>
+        <div class="ctrl">
+          <label>Nombre del perfil</label>
+          <input type="text" id="nombre" value="Perfil-1" placeholder="Perfil-1">
+        </div>
+        <div class="ctrl row2">
+          <div>
+            <label>Intervalo (m)</label>
+            <input type="number" id="intervalo" value="20" min="1" max="500" step="1">
+          </div>
+          <div>
+            <label>Dataset</label>
+            <select id="dataset">
+              <option value="aster30m">ASTER 30m</option>
+              <option value="srtm30m" selected>SRTM 30m</option>
+              <option value="eudem25m">EU-DEM 25m</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUAVIZADO -->
+      <div class="sec">
+        <div class="sec-title">Suavizado</div>
+        <div class="ctrl row2">
+          <div>
+            <label>Modo</label>
+            <select id="suav-modo" onchange="_onSuavChange()">
+              <option value="none" selected>Ninguno</option>
+              <option value="median">Mediana móvil</option>
+              <option value="outlier">Detectar outliers</option>
+            </select>
+          </div>
+          <div>
+            <label>Ventana (pts)</label>
+            <input type="number" id="suav-win" value="3" min="3" max="15" step="2" onchange="_onSuavChange()">
+          </div>
+        </div>
+        <div id="suav-info" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-top:4px;min-height:12px"></div>
+      </div>
+
+      <!-- CURVAS DE NIVEL -->
+      <div class="sec">
+        <div class="sec-title">Curvas de nivel</div>
+        <div class="ctrl" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0">
+            <input type="checkbox" class="osm-chk" id="cn-enable" checked onchange="_onCnChange()">
+            <span style="font-size:11px">Mostrar en el perfil</span>
+          </label>
+        </div>
+        <div class="ctrl">
+          <label>Equidistancia</label>
+          <select id="cn-equi" onchange="_onCnChange()">
+            <option value="auto" selected>Auto</option>
+            <option value="1">1 m</option>
+            <option value="5">5 m</option>
+            <option value="10">10 m</option>
+            <option value="25">25 m</option>
+            <option value="50">50 m</option>
+            <option value="100">100 m</option>
+          </select>
+        </div>
+        <div id="cn-info" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-top:4px;min-height:12px"></div>
+      </div>
+
+      <!-- FEATURES OSM -->
+      <div class="sec">
+        <div class="sec-title">Features OSM</div>
+        <div class="ctrl row2" style="grid-template-columns:1fr 1fr">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="osm-chk" id="osm-highway" checked> Caminos
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="osm-chk" id="osm-power" checked> L. eléctricas
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="osm-chk" id="osm-building" checked> Edificios
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="osm-chk" id="osm-waterway" checked> Cursos agua
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="osm-chk" id="osm-railway" checked> Vías férreas
+          </label>
+          <div>
+            <label style="margin-bottom:2px;display:block">Buffer (m)</label>
+            <input type="number" id="osm-buffer" value="30" min="5" max="200" step="5"
+                   style="padding:4px 6px;font-size:11px">
+          </div>
+        </div>
+        <div id="osm-info" style="font-family:var(--mono);font-size:10px;color:var(--txt3);margin-top:6px;min-height:12px"></div>
+      </div>
+
+      <!-- PROGRESO -->
+      <div id="prog-wrap" class="sec">
+        <div id="prog-bar-outer"><div id="prog-bar-inner"></div></div>
+        <div id="prog-txt"></div>
+      </div>
+
+      <!-- ACCIONES -->
+      <div class="sec">
+        <div class="sec-title">Acciones</div>
+        <div class="ctrl">
+          <button class="btn btn-primary" id="btn-dibujar" onclick="iniciarDibujo()">
+            ✏ Dibujar Línea
+          </button>
+        </div>
+
+        <!-- ACCIONES DURANTE DIBUJO (aparecen solo mientras dibujas) -->
+        <div id="draw-actions">
+          <div class="draw-hint">
+            <b>Dibujando…</b><br>
+            Clic en el mapa para agregar puntos.
+          </div>
+          <div class="draw-counter">Vértices: <b id="draw-count">0</b></div>
+          <button class="btn-draw-action finish" id="btn-draw-finish" onclick="drawFinish()" disabled>
+            ✓ Terminar dibujo
+          </button>
+          <button class="btn-draw-action" id="btn-draw-undo" onclick="drawUndo()" disabled>
+            ↶ Borrar último punto
+          </button>
+          <button class="btn-draw-action cancel" onclick="drawCancel()">
+            ✕ Cancelar
+          </button>
+        </div>
+        <div class="ctrl">
+          <button class="btn btn-primary" id="btn-procesar" onclick="procesarLinea()" disabled>
+            ⬇ Obtener Elevaciones
+          </button>
+        </div>
+        <div class="ctrl">
+          <button class="btn" id="btn-limpiar" onclick="limpiarTodo()"
+            style="background:#1a0a0a;border:1px solid #3d1515;color:#ff8080;font-size:11px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;cursor:pointer;padding:7px;border-radius:5px;width:100%">
+            ✕ Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- ESTADÍSTICAS -->
+      <div class="sec" id="sec-stats" style="display:none">
+        <div class="sec-title">Estadísticas</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="sv" id="stat-dist">—</span>
+            <div class="sl">Distancia total</div>
+          </div>
+          <div class="stat-box">
+            <span class="sv" id="stat-pts">—</span>
+            <div class="sl">Puntos</div>
+          </div>
+          <div class="stat-box">
+            <span class="sv" id="stat-zmax">—</span>
+            <div class="sl">Cota máx</div>
+          </div>
+          <div class="stat-box">
+            <span class="sv" id="stat-zmin">—</span>
+            <div class="sl">Cota mín</div>
+          </div>
+          <div class="stat-box">
+            <span class="sv" id="stat-desnivel">—</span>
+            <div class="sl">Desnivel</div>
+          </div>
+          <div class="stat-box">
+            <span class="sv" id="stat-pendiente">—</span>
+            <div class="sl">Pend. media</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORTAR -->
+      <div class="sec" id="sec-export" style="display:none">
+        <div class="sec-title">Exportar</div>
+        <div class="btn-row">
+          <button class="btn btn-success" style="flex:1" onclick="exportarXLSX()">📗 XLSX</button>
+          <button class="btn btn-success" style="flex:1" onclick="exportarTXT()">📄 TXT</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-success" style="flex:1" onclick="exportarKML()">🌐 KML</button>
+          <button class="btn btn-success" style="flex:1" onclick="exportarJSON()">{ } JSON</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-warn" style="flex:1" onclick="exportarCSV()">📊 CSV</button>
+          <button class="btn btn-warn" style="flex:1" onclick="exportarPerfil()">🖼 Perfil PNG</button>
+        </div>
+      </div>
+
+    </div>
+    <div id="status-bar">Listo — dibuja una línea en el mapa</div>
+  </div>
+
+  <!-- DERECHO -->
+  <div id="right">
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="hint">
+        <div id="hint-inner">
+          <span class="hi">📐</span>
+          <p>Haz clic en <strong>"Dibujar Línea"</strong><br>
+          y traza el recorrido en el mapa.<br>
+          <br>
+          Puedes agregar quiebres haciendo<br>
+          clic en cada punto intermedio.<br>
+          Doble clic para terminar.</p>
+        </div>
+      </div>
+      <div id="layer-btn">
+        <div class="layer-opt active" onclick="cambiarCapa('osm',this)">OSM</div>
+        <div class="layer-opt" onclick="cambiarCapa('sat',this)">SAT</div>
+        <div class="layer-opt" onclick="cambiarCapa('topo',this)">TOPO</div>
+      </div>
+    </div>
+    <div id="divider"></div>
+    <div id="perfil-wrap">
+      <div id="perfil-header">
+        <span class="ph-title">▸ Perfil Longitudinal</span>
+        <div class="spacer"></div>
+        <span class="ph-info" id="perfil-info">Sin datos</span>
+      </div>
+      <div id="canvas-wrap">
+        <canvas id="perfil-canvas"></canvas>
+        <div id="osm-legend" class="hidden"></div>
+        <div id="perfil-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="3,17 7,11 11,14 15,7 21,7"/>
+            <line x1="3" y1="21" x2="21" y2="21"/>
+          </svg>
+          Procesa una línea para ver el perfil
+        </div>
+        <div id="perfil-tooltip"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPT 1: Loader Leaflet -->
+<script>
+(function(){
+  function addCss(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
+  function loadJs(urls,i){
+    return new Promise(function(res,rej){
+      if(i>=urls.length){rej(new Error('CDN fallido'));return;}
+      var s=document.createElement('script');s.src=urls[i];
+      s.onload=res;
+      s.onerror=function(){loadJs(urls,i+1).then(res,rej);};
+      document.head.appendChild(s);
+    });
+  }
+  loadJs(['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+          'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'],0)
+  .then(function(){
+    return loadJs(['https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js',
+                   'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js'],0);
+  })
+  .then(function(){
+    // SheetJS (xlsx) — lazy: si falla, exportarXLSX lo reporta.
+    return loadJs(['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+                   'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'],0)
+           .catch(function(){ /* no fatal, seguimos */ });
+  })
+  .then(function(){
+    _setupMap();
+    if(window.location.protocol==='file:'){
+      document.getElementById('banner').classList.remove('hidden');
+      document.body.classList.add('with-banner');
+    }
+  })
+  .catch(function(err){
+    document.getElementById('map').innerHTML=
+      '<div style="padding:20px;color:#ff4757;font-family:monospace"><b>Error cargando mapa:</b> '+err.message+'</div>';
+  });
+}());
+</script>
+
+<!-- SCRIPT 2: App principal -->
+<script>
+'use strict';
+
+// ── ESTADO GLOBAL ────────────────────────────────────────────
+var G = {
+  linea:     null,   // [[lat,lon],...] puntos del trazado dibujado
+  muestras:  [],     // [{lat,lon,z,zRaw,dist,distAcum}] puntos muestreados
+  quiebres:  [],     // índices de puntos de quiebre en G.linea
+  nombre:    'Perfil-1',
+  intervalo: 20,
+  listo:     false,
+  osm:       [],     // features OSM encontradas a lo largo del trazado
+  datasetUsado: null,// dataset real usado (puede diferir del seleccionado si cayó a fallback)
+};
+
+// Categorías OSM — orden, color, símbolo, y filtro Overpass
+var OSM_CATS = {
+  highway:  { label:'Camino',     color:'#ffb300', icon:'━',  prefix:'EJE-CAM', qlFilter:'["highway"]',
+              qlRegex:'["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|road|living_street)$"]' },
+  railway:  { label:'Vía férrea', color:'#a78bfa', icon:'╪',  prefix:'VIA',     qlFilter:'["railway"]',
+              qlRegex:'["railway"~"^(rail|light_rail|subway|tram|narrow_gauge)$"]' },
+  power:    { label:'L. eléctrica',color:'#f472b6', icon:'⚡', prefix:'LEA',     qlFilter:'["power"]',
+              qlRegex:'["power"~"^(line|minor_line|cable)$"]' },
+  waterway: { label:'Agua',       color:'#38bdf8', icon:'~',  prefix:'RIO',     qlFilter:'["waterway"]',
+              qlRegex:'["waterway"~"^(river|stream|canal|drain|ditch)$"]' },
+  building: { label:'Edificio',   color:'#fb923c', icon:'■',  prefix:'EDIF',    qlFilter:'["building"]',
+              qlRegex:'["building"]' },
+};
+
+var map, TILES, drawLayer, drawCtrl;
+var capaActiva='osm';
+
+// ── MAPA ──────────────────────────────────────────────────────
+function _setupMap() {
+  var capas = {
+    osm:  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            {attribution:'OSM',maxZoom:19}),
+    sat:  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {attribution:'Esri',maxZoom:19}),
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            {attribution:'OpenTopoMap',maxZoom:17}),
+  };
+  TILES = capas;
+  map = L.map('map',{center:[-33.45,-70.65],zoom:13,layers:[capas.osm]});
+  drawLayer = new L.FeatureGroup();
+  map.addLayer(drawLayer);
+  drawCtrl = new L.Control.Draw({
+    draw:{
+      polyline:{shapeOptions:{color:'#00d4ff',weight:3,opacity:.9},
+                showLength:true,metric:true},
+      polygon:false,rectangle:false,circle:false,
+      marker:false,circlemarker:false
+    },
+    edit:{featureGroup:drawLayer}
+  });
+  map.addControl(drawCtrl);
+
+  // Evento: línea dibujada
+  map.on(L.Draw.Event.CREATED, function(e){
+    drawLayer.clearLayers();
+    drawLayer.addLayer(e.layer);
+    var latlngs = e.layer.getLatLngs();
+    G.linea = latlngs.map(function(ll){return [ll.lat,ll.lng];});
+    G.quiebres = G.linea.map(function(_,i){return i;}); // todos los vértices son quiebres
+    _drawHandler = null;
+    _setDrawMode(false);
+    _onLineaLista();
+  });
+
+  // Eventos para contador de vértices en vivo
+  map.on(L.Draw.Event.DRAWVERTEX, function(e){
+    var n = (e.layers && e.layers.getLayers) ? e.layers.getLayers().length : 0;
+    _updateDrawUI(n);
+  });
+  map.on(L.Draw.Event.DRAWSTOP, function(){
+    // Se llama al desactivar el handler — si no hubo CREATED, cerramos UI
+    if(_drawHandler){
+      _drawHandler = null;
+      _setDrawMode(false);
+    }
+  });
+
+  map.on(L.Draw.Event.EDITED, function(){
+    var layers=drawLayer.getLayers();
+    if(!layers.length) return;
+    var latlngs=layers[0].getLatLngs();
+    G.linea=latlngs.map(function(ll){return [ll.lat,ll.lng];});
+    G.quiebres=G.linea.map(function(_,i){return i;});
+    G.muestras=[];
+    G.listo=false;
+    _updateSteps(1);
+    document.getElementById('btn-procesar').disabled=false;
+    document.getElementById('sec-stats').style.display='none';
+    document.getElementById('sec-export').style.display='none';
+    _clearPerfil();
+    sb('Línea editada — vuelve a procesar','warn');
+  });
+
+  map.on(L.Draw.Event.DELETED, function(){
+    limpiarTodo();
+  });
+}
+
+function cambiarCapa(nombre, el) {
+  if(!map) return;
+  map.removeLayer(TILES[capaActiva]);
+  map.addLayer(TILES[nombre]);
+  capaActiva=nombre;
+  document.querySelectorAll('.layer-opt').forEach(function(e){e.classList.remove('active');});
+  el.classList.add('active');
+}
+
+// ── HELPERS UI ───────────────────────────────────────────────
+function prog(pct, txt) {
+  var w=document.getElementById('prog-wrap');
+  w.style.display=pct>0?'block':'none';
+  document.getElementById('prog-bar-inner').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=txt||'';
+}
+function sb(msg, tipo) {
+  var el=document.getElementById('status-bar');
+  el.textContent=msg; el.className=tipo||'';
+}
+function delay(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+function _updateSteps(activo) {
+  [1,2,3].forEach(function(n){
+    var el=document.getElementById('step'+n);
+    el.className='step'+(n<activo?' done':n===activo?' active':'');
+  });
+}
+
+// ── FETCH CON PROXIES ────────────────────────────────────────
+// Cada proxy recibe la URL tal cual; nos encargamos del encoding donde es necesario.
+var PROXIES=[
+  function(u){return u;},                                            // directo (solo funciona si el servicio tiene CORS y/o estamos en localhost)
+  function(u){return 'https://corsproxy.io/?'+encodeURIComponent(u);},
+  function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
+  function(u){return 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u);}
+];
+
+async function fetchJSON(url, timeoutMs) {
+  timeoutMs = timeoutMs || 15000;
+  var lastErr='(sin error)';
+  for(var pi=0;pi<PROXIES.length;pi++){
+    var purl=PROXIES[pi](url);
+    try{
+      var ctrl=new AbortController();
+      var tid=setTimeout(function(){ctrl.abort();},timeoutMs);
+      var r=await fetch(purl,{mode:'cors',signal:ctrl.signal,headers:{'Accept':'application/json'}});
+      clearTimeout(tid);
+      if(!r.ok){lastErr='HTTP '+r.status+' via proxy#'+pi;continue;}
+      var txt=await r.text();
+      if(!txt){lastErr='respuesta vacía';continue;}
+      // Descartar HTML de páginas de error del proxy
+      var trimmed=txt.trim();
+      if(trimmed[0]==='<'){lastErr='respuesta no-JSON';continue;}
+      try{
+        return JSON.parse(trimmed);
+      }catch(pe){
+        lastErr='JSON parse: '+pe.message;
+        continue;
+      }
+    }catch(e){
+      lastErr=(e.name==='AbortError'?'timeout':e.message)+' via proxy#'+pi;
+    }
+  }
+  throw new Error(lastErr);
+}
+
+// Convierte [[lat,lon],...] -> "lat,lon|lat,lon..." CODIFICADO como query param.
+// Retornamos ya el querystring completo para evitar dobles-encoding confusos.
+function _buildLocationsParam(batch){
+  // El pipe '|' DEBE encoded-a %7C para sobrevivir proxies que re-encodean la URL.
+  return batch.map(function(ll){
+    return ll[0].toFixed(6)+','+ll[1].toFixed(6);
+  }).join('|');
+}
+
+async function fetchLote(batch, ds) {
+  var locs=_buildLocationsParam(batch);
+  var encLocs=encodeURIComponent(locs);
+
+  // 1) OpenTopoData con el dataset elegido
+  try{
+    var url='https://api.opentopodata.org/v1/'+ds+'?locations='+encLocs;
+    var d=await fetchJSON(url);
+    if(d && d.status==='OK' && Array.isArray(d.results)){
+      return {
+        source: ds,
+        elevs: d.results.map(function(r){
+          return (r && typeof r.elevation==='number') ? r.elevation : null;
+        })
+      };
+    }
+  }catch(e){ /* intentar fallback */ }
+
+  // 2) OpenTopoData con SRTM30m (fallback global)
+  if(ds!=='srtm30m'){
+    try{
+      var url2='https://api.opentopodata.org/v1/srtm30m?locations='+encLocs;
+      var d2=await fetchJSON(url2);
+      if(d2 && d2.status==='OK' && Array.isArray(d2.results)){
+        return {
+          source: 'srtm30m',
+          elevs: d2.results.map(function(r){
+            return (r && typeof r.elevation==='number') ? r.elevation : null;
+          })
+        };
+      }
+    }catch(e){}
+  }
+
+  // 3) Open-Elevation (último recurso)
+  try{
+    var url3='https://api.open-elevation.com/api/v1/lookup?locations='+encLocs;
+    var d3=await fetchJSON(url3);
+    if(d3 && Array.isArray(d3.results)){
+      return {
+        source: 'open-elevation',
+        elevs: d3.results.map(function(r){
+          return (r && typeof r.elevation==='number') ? r.elevation : null;
+        })
+      };
+    }
+  }catch(e){}
+
+  return { source:'none', elevs: batch.map(function(){return null;}) };
+}
+
+async function bajarElevaciones(pts_ll, ds) {
+  var LOTE=10, PAR=3, lotes=[];
+  for(var i=0;i<pts_ll.length;i+=LOTE)
+    lotes.push({ini:i,pts:pts_ll.slice(i,i+LOTE)});
+
+  var todas=new Array(pts_ll.length).fill(null);
+  var fuentes=new Array(pts_ll.length).fill(null);
+  var completados=0;
+
+  for(var g=0;g<lotes.length;g+=PAR){
+    var grp=lotes.slice(g,g+PAR);
+    var res=await Promise.all(grp.map(function(l){return fetchLote(l.pts,ds);}));
+    res.forEach(function(result,gi){
+      var ini=grp[gi].ini;
+      result.elevs.forEach(function(z,j){
+        var valido = (typeof z==='number') && isFinite(z) && z>-400 && z<9000;
+        todas[ini+j] = valido ? z : null;
+        fuentes[ini+j] = valido ? result.source : null;
+      });
+      completados += grp[gi].pts.length;
+    });
+    prog(10+Math.floor(completados/pts_ll.length*60),
+         'Elevaciones '+completados+'/'+pts_ll.length);
+    if(g+PAR<lotes.length) await delay(200);
+  }
+  // Determinar dataset predominante para reportar
+  var counts={};
+  fuentes.forEach(function(s){ if(s){ counts[s]=(counts[s]||0)+1; }});
+  var mainSrc=null, maxC=0;
+  Object.keys(counts).forEach(function(k){ if(counts[k]>maxC){maxC=counts[k];mainSrc=k;}});
+  G.datasetUsado = mainSrc || ds;
+  return todas;
+}
+
+// ── SUAVIZADO DEL PERFIL ─────────────────────────────────────
+// Mediana de un array (ignora null/NaN)
+function _mediana(arr){
+  var v=arr.filter(function(x){return x!==null && isFinite(x);}).slice().sort(function(a,b){return a-b;});
+  if(!v.length) return null;
+  var n=v.length;
+  return n%2 ? v[(n-1)>>1] : (v[n/2-1]+v[n/2])/2;
+}
+
+// Desviación absoluta mediana (MAD) — robusta a outliers
+function _mad(arr, med){
+  var devs=arr.filter(function(x){return x!==null && isFinite(x);})
+              .map(function(x){return Math.abs(x-med);});
+  return _mediana(devs);
+}
+
+// Aplica suavizado a las muestras. No muta G.muestras — devuelve array de z nuevos.
+// modo: 'none' | 'median' | 'outlier'
+// win: tamaño de ventana (impar, mínimo 3)
+function aplicarSuavizado(muestras, modo, win){
+  if(!muestras || !muestras.length) return [];
+  win = Math.max(3, win|0);
+  if(win%2===0) win++;
+  var half = (win-1)>>1;
+  var zs = muestras.map(function(m){ return m.zRaw; });
+
+  if(modo==='none') return zs.slice();
+
+  if(modo==='median'){
+    // Mediana móvil centrada
+    var out = new Array(zs.length);
+    for(var i=0;i<zs.length;i++){
+      var lo=Math.max(0,i-half), hi=Math.min(zs.length-1,i+half);
+      var window=zs.slice(lo,hi+1);
+      var m=_mediana(window);
+      out[i] = (m!==null) ? m : zs[i];
+    }
+    return out;
+  }
+
+  if(modo==='outlier'){
+    // Detectar y reemplazar outliers: un punto es outlier si |z - mediana_local| > 3 * MAD_local
+    // Solo se reemplazan outliers, el resto queda intacto.
+    var out2 = zs.slice();
+    for(var i=0;i<zs.length;i++){
+      if(zs[i]===null || !isFinite(zs[i])) continue;
+      var lo2=Math.max(0,i-half), hi2=Math.min(zs.length-1,i+half);
+      var w2=zs.slice(lo2,hi2+1);
+      var med=_mediana(w2);
+      if(med===null) continue;
+      var mad=_mad(w2, med);
+      // MAD * 1.4826 ≈ sigma bajo distribución normal
+      var sigma = (mad!==null && mad>0) ? mad*1.4826 : 0;
+      // Si MAD es 0 (terreno plano), usar un umbral mínimo absoluto de 5m
+      var thresh = Math.max(sigma*3, 5);
+      if(Math.abs(zs[i]-med) > thresh){
+        // Reemplazar por interpolación lineal de los vecinos válidos más cercanos
+        var prevZ=null, nextZ=null, prevD=null, nextD=null;
+        for(var j=i-1;j>=0;j--){
+          if(zs[j]!==null && Math.abs(zs[j]-med)<=thresh){
+            prevZ=zs[j]; prevD=muestras[j].distAcum; break;
+          }
+        }
+        for(var j=i+1;j<zs.length;j++){
+          if(zs[j]!==null && Math.abs(zs[j]-med)<=thresh){
+            nextZ=zs[j]; nextD=muestras[j].distAcum; break;
+          }
+        }
+        if(prevZ!==null && nextZ!==null){
+          var t = (muestras[i].distAcum-prevD)/(nextD-prevD);
+          out2[i] = prevZ + t*(nextZ-prevZ);
+        } else if(prevZ!==null) out2[i]=prevZ;
+        else if(nextZ!==null) out2[i]=nextZ;
+        else out2[i]=med;
+      }
+    }
+    return out2;
+  }
+
+  return zs.slice();
+}
+
+// Cuenta outliers respecto al raw (para mostrar en UI)
+function _contarModificados(muestras){
+  var n=0;
+  muestras.forEach(function(m){
+    if(m.zRaw!==null && m.z!==null && Math.abs(m.zRaw-m.z)>0.01) n++;
+  });
+  return n;
+}
+
+function _onSuavChange(){
+  if(!G.listo || !G.muestras.length) return;
+  var modo = document.getElementById('suav-modo').value;
+  var win  = parseInt(document.getElementById('suav-win').value)||3;
+  var nuevasZ = aplicarSuavizado(G.muestras, modo, win);
+  G.muestras.forEach(function(m,i){ m.z = nuevasZ[i]; });
+  var mod = _contarModificados(G.muestras);
+  var info = document.getElementById('suav-info');
+  if(modo==='none') info.textContent = 'Sin suavizado';
+  else if(modo==='median') info.textContent = mod+'/'+G.muestras.length+' puntos suavizados';
+  else info.textContent = mod+' outliers corregidos';
+  _calcStats();
+  _dibujarPerfil();
+}
+
+// ── CURVAS DE NIVEL ──────────────────────────────────────────
+// Elige equidistancia automática según el desnivel del perfil
+function _equidistanciaAuto(desnivel){
+  if(desnivel < 10)  return 1;
+  if(desnivel < 40)  return 5;
+  if(desnivel < 150) return 10;
+  if(desnivel < 400) return 25;
+  if(desnivel < 1000)return 50;
+  return 100;
+}
+
+// Detecta todos los cruces del perfil con cotas redondas (múltiplos de `equi`).
+// Devuelve lista ordenada por progresiva: [{prog, cota, subiendo}]
+// Un mismo valor de cota puede aparecer varias veces si el perfil sube y baja.
+function calcularCrucesCotas(muestras, equi){
+  if(!muestras || muestras.length<2 || !equi || equi<=0) return [];
+  var cruces=[];
+  for(var i=0;i<muestras.length-1;i++){
+    var a=muestras[i], b=muestras[i+1];
+    if(a.z===null || b.z===null || !isFinite(a.z) || !isFinite(b.z)) continue;
+    var z0=a.z, z1=b.z;
+    if(z0===z1) continue;
+    var zMin=Math.min(z0,z1), zMax=Math.max(z0,z1);
+    // Primera cota redonda ≥ zMin
+    var kStart = Math.ceil(zMin/equi) * equi;
+    // Pequeña tolerancia para evitar contar un mismo valor dos veces si cae exacto en un vértice
+    var EPS = 1e-6;
+    for(var cota=kStart; cota<=zMax+EPS; cota+=equi){
+      // Excluir extremos exactos para no duplicar con el siguiente segmento
+      if(Math.abs(cota-zMax)<EPS && cota!==zMin) {
+        // Se contará al inicio del próximo segmento si corresponde — saltamos
+        continue;
+      }
+      var t=(cota-z0)/(z1-z0); // 0..1 dentro del segmento
+      if(t<0 || t>1) continue;
+      var prog = a.distAcum + t*(b.distAcum - a.distAcum);
+      cruces.push({
+        prog: prog,
+        cota: Math.round(cota*1e6)/1e6, // evita 824.9999999
+        subiendo: z1>z0
+      });
+    }
+  }
+  cruces.sort(function(x,y){return x.prog-y.prog;});
+  return cruces;
+}
+
+// Determina la equidistancia efectiva según UI + datos actuales
+function _equiEfectiva(){
+  var sel = document.getElementById('cn-equi').value;
+  if(sel==='auto'){
+    if(!G.muestras || !G.muestras.length) return 10;
+    var zs=G.muestras.map(function(m){return m.z;}).filter(function(z){return z!==null && isFinite(z);});
+    if(zs.length<2) return 10;
+    return _equidistanciaAuto(Math.max.apply(null,zs)-Math.min.apply(null,zs));
+  }
+  return parseFloat(sel)||10;
+}
+
+// Handler de cambio en UI de curvas
+function _onCnChange(){
+  if(!G.listo || !G.muestras.length){
+    document.getElementById('cn-info').textContent='';
+    return;
+  }
+  _dibujarPerfil();
+}
+
+
+// ── FEATURES OSM (Overpass) ──────────────────────────────────
+// Bounding box del trazado con buffer en metros
+function _bboxTrazado(linea, bufferM){
+  var minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+  linea.forEach(function(p){
+    if(p[0]<minLat)minLat=p[0]; if(p[0]>maxLat)maxLat=p[0];
+    if(p[1]<minLon)minLon=p[1]; if(p[1]>maxLon)maxLon=p[1];
+  });
+  var midLat=(minLat+maxLat)/2;
+  var dLat=bufferM/111320;
+  var dLon=bufferM/(111320*Math.cos(midLat*Math.PI/180));
+  return [minLat-dLat, minLon-dLon, maxLat+dLat, maxLon+dLon];
+}
+
+// Distancia punto-a-segmento en metros (proyección equirectangular local)
+function _distPuntoSegmento(plat,plon, alat,alon, blat,blon){
+  var lat0=(alat+blat)/2;
+  var mx=Math.cos(lat0*Math.PI/180)*111320, my=111320;
+  var ax=alon*mx, ay=alat*my;
+  var bx=blon*mx, by=blat*my;
+  var px=plon*mx, py=plat*my;
+  var dx=bx-ax, dy=by-ay;
+  var len2=dx*dx+dy*dy;
+  if(len2===0) return {dist:Math.hypot(px-ax,py-ay), t:0};
+  var t=((px-ax)*dx+(py-ay)*dy)/len2;
+  if(t<0)t=0; if(t>1)t=1;
+  var cx=ax+t*dx, cy=ay+t*dy;
+  return {dist:Math.hypot(px-cx,py-cy), t:t};
+}
+
+// Encuentra progresiva (distAcum a lo largo del perfil) y distancia perpendicular
+function _progresivaCercana(plat, plon){
+  var ms=G.muestras;
+  if(!ms || ms.length<2) return null;
+  var best={dist:Infinity, prog:0};
+  for(var i=0;i<ms.length-1;i++){
+    var r=_distPuntoSegmento(plat,plon, ms[i].lat,ms[i].lon, ms[i+1].lat,ms[i+1].lon);
+    if(r.dist<best.dist){
+      var segLen=ms[i+1].distAcum-ms[i].distAcum;
+      best={dist:r.dist, prog:ms[i].distAcum+r.t*segLen};
+    }
+  }
+  return best;
+}
+
+// Intersección de dos segmentos en lat/lon
+function _interseccionSegmentos(a1lat,a1lon,a2lat,a2lon, b1lat,b1lon,b2lat,b2lon){
+  var lat0=(a1lat+a2lat+b1lat+b2lat)/4;
+  var mx=Math.cos(lat0*Math.PI/180)*111320, my=111320;
+  var x1=a1lon*mx, y1=a1lat*my;
+  var x2=a2lon*mx, y2=a2lat*my;
+  var x3=b1lon*mx, y3=b1lat*my;
+  var x4=b2lon*mx, y4=b2lat*my;
+  var den=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);
+  if(Math.abs(den)<1e-9) return null;
+  var t=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/den;
+  var u=-((x1-x2)*(y1-y3)-(y1-y2)*(x1-x3))/den;
+  if(t<0||t>1||u<0||u>1) return null;
+  var ix=x1+t*(x2-x1), iy=y1+t*(y2-y1);
+  return [iy/my, ix/mx];
+}
+
+// Intersecta polilínea OSM con el trazado → lista de puntos con progresiva
+function _interseccionesConTrazado(osmPts){
+  var ms=G.muestras;
+  var out=[];
+  if(!ms || ms.length<2 || !osmPts || osmPts.length<2) return out;
+  for(var i=0;i<ms.length-1;i++){
+    for(var k=0;k<osmPts.length-1;k++){
+      var hit=_interseccionSegmentos(
+        ms[i].lat,ms[i].lon, ms[i+1].lat,ms[i+1].lon,
+        osmPts[k][0],osmPts[k][1], osmPts[k+1][0],osmPts[k+1][1]
+      );
+      if(hit){
+        var segLen=ms[i+1].distAcum-ms[i].distAcum;
+        var rs=_distPuntoSegmento(hit[0],hit[1], ms[i].lat,ms[i].lon, ms[i+1].lat,ms[i+1].lon);
+        out.push({lat:hit[0], lon:hit[1], prog:ms[i].distAcum+rs.t*segLen});
+      }
+    }
+  }
+  return out;
+}
+
+// Construye consulta Overpass QL
+function _buildOverpassQL(bbox, cats){
+  var bb = bbox[0].toFixed(6)+','+bbox[1].toFixed(6)+','+bbox[2].toFixed(6)+','+bbox[3].toFixed(6);
+  var parts=[];
+  cats.forEach(function(cat){
+    var def=OSM_CATS[cat];
+    if(!def) return;
+    if(cat==='building'){
+      parts.push('way'+def.qlRegex+'('+bb+');');
+      parts.push('relation'+def.qlRegex+'('+bb+');');
+    } else {
+      parts.push('way'+def.qlRegex+'('+bb+');');
+    }
+  });
+  if(!parts.length) return null;
+  return '[out:json][timeout:25];('+parts.join('')+');out geom;';
+}
+
+// Obtener features OSM para el trazado actual
+async function obtenerFeaturesOSM(){
+  G.osm=[];
+  var cats=[];
+  Object.keys(OSM_CATS).forEach(function(k){
+    var chk=document.getElementById('osm-'+k);
+    if(chk && chk.checked) cats.push(k);
+  });
+  if(!cats.length){
+    document.getElementById('osm-info').textContent='Sin categorías seleccionadas';
+    return;
+  }
+  var bufferM = parseInt(document.getElementById('osm-buffer').value)||30;
+  var bbox=_bboxTrazado(G.linea, bufferM+20);
+
+  var ql=_buildOverpassQL(bbox, cats);
+  if(!ql) return;
+
+  var endpoints=[
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.ru/api/interpreter'
+  ];
+
+  var data=null, lastErr='';
+  for(var ei=0;ei<endpoints.length;ei++){
+    try{
+      var ctrl=new AbortController();
+      var tid=setTimeout(function(){ctrl.abort();},30000);
+      var r=await fetch(endpoints[ei],{
+        method:'POST',
+        mode:'cors',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'data='+encodeURIComponent(ql),
+        signal:ctrl.signal
+      });
+      clearTimeout(tid);
+      if(!r.ok){lastErr='HTTP '+r.status;continue;}
+      data=await r.json();
+      break;
+    }catch(e){lastErr=e.message;}
+  }
+  if(!data || !data.elements){
+    document.getElementById('osm-info').textContent='OSM sin respuesta: '+lastErr;
+    return;
+  }
+
+  var features=[];
+  data.elements.forEach(function(el){
+    var t=el.tags||{};
+    var cat=null;
+    if(t.highway && cats.indexOf('highway')>=0) cat='highway';
+    else if(t.railway && cats.indexOf('railway')>=0) cat='railway';
+    else if(t.power && cats.indexOf('power')>=0) cat='power';
+    else if(t.waterway && cats.indexOf('waterway')>=0) cat='waterway';
+    else if(t.building && cats.indexOf('building')>=0) cat='building';
+    if(!cat) return;
+
+    var geom = el.geometry;
+    if(!geom || !geom.length) return;
+    var pts = geom.map(function(g){return [g.lat,g.lon];});
+    var nombre = t.name || t.ref || t['addr:street'] || '';
+
+    if(cat==='building'){
+      var cLat=0,cLon=0;
+      pts.forEach(function(p){cLat+=p[0];cLon+=p[1];});
+      cLat/=pts.length; cLon/=pts.length;
+      var pr = _progresivaCercana(cLat, cLon);
+      if(pr && pr.dist<=bufferM){
+        features.push({
+          cat:cat, nombre:nombre, tags:t,
+          lat:cLat, lon:cLon,
+          prog:pr.prog, distPerp:pr.dist,
+          tipo:'point'
+        });
+      }
+    } else {
+      var hits = _interseccionesConTrazado(pts);
+      if(hits.length){
+        hits.forEach(function(h){
+          features.push({
+            cat:cat, nombre:nombre, tags:t,
+            lat:h.lat, lon:h.lon,
+            prog:h.prog, distPerp:0,
+            tipo:'crossing'
+          });
+        });
+      } else {
+        var best=null;
+        pts.forEach(function(p){
+          var pr=_progresivaCercana(p[0],p[1]);
+          if(pr && pr.dist<=bufferM && (!best||pr.dist<best.dist)){
+            best={lat:p[0],lon:p[1],prog:pr.prog,dist:pr.dist};
+          }
+        });
+        if(best){
+          features.push({
+            cat:cat, nombre:nombre, tags:t,
+            lat:best.lat, lon:best.lon,
+            prog:best.prog, distPerp:best.dist,
+            tipo:'nearby'
+          });
+        }
+      }
+    }
+  });
+
+  features.sort(function(a,b){return a.prog-b.prog;});
+
+  // Deduplicar buildings muy cercanos
+  var dedup=[];
+  features.forEach(function(f){
+    if(f.cat!=='building'){ dedup.push(f); return; }
+    var dup = dedup.some(function(d){
+      return d.cat==='building' && Math.abs(d.prog-f.prog)<5;
+    });
+    if(!dup) dedup.push(f);
+  });
+  G.osm = dedup;
+
+  // Reportar en UI
+  var conteo={};
+  dedup.forEach(function(f){ conteo[f.cat]=(conteo[f.cat]||0)+1; });
+  var resumen=Object.keys(conteo).map(function(k){
+    return OSM_CATS[k].label+': '+conteo[k];
+  }).join(' · ');
+  document.getElementById('osm-info').textContent = dedup.length
+    ? resumen
+    : 'Sin features en el buffer';
+}
+
+// Marcadores OSM en el mapa
+var _osmMarkers=[];
+function _limpiarMarcadoresOSM(){
+  _osmMarkers.forEach(function(m){if(map)map.removeLayer(m);});
+  _osmMarkers=[];
+}
+function _dibujarMarcadoresOSM(){
+  _limpiarMarcadoresOSM();
+  if(!map || !G.osm || !G.osm.length) return;
+  G.osm.forEach(function(f){
+    var def=OSM_CATS[f.cat];
+    var html='<div style="width:10px;height:10px;margin:-5px 0 0 -5px;'+
+             'background:'+def.color+';border:1.5px solid #080c14;border-radius:2px;'+
+             'box-shadow:0 0 6px '+def.color+'88"></div>';
+    var icon=L.divIcon({className:'',html:html,iconSize:[10,10]});
+    var mk=L.marker([f.lat,f.lon],{icon:icon,zIndexOffset:300});
+    var nombre = f.nombre || '(sin nombre)';
+    mk.bindTooltip(
+      '<span style="font-family:var(--mono);font-size:10px">'+
+      '<b style="color:'+def.color+'">'+def.label+'</b><br>'+
+      nombre+'<br>'+
+      'prog = '+_fmtDist(f.prog)+
+      (f.distPerp>0?'<br>perp = '+f.distPerp.toFixed(0)+'m':'')+
+      '</span>',
+      {permanent:false,direction:'top'}
+    );
+    mk.addTo(map);
+    _osmMarkers.push(mk);
+  });
+}
+
+// ── GEOMETRÍA ────────────────────────────────────────────────
+// Distancia Haversine en metros entre dos puntos lat/lon
+function haversine(lat1,lon1,lat2,lon2){
+  var R=6371000, r=Math.PI/180;
+  var dLat=(lat2-lat1)*r, dLon=(lon2-lon1)*r;
+  var a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Interpolar punto en un segmento lat/lon a fracción t [0,1]
+function interpolar(lat1,lon1,lat2,lon2,t){
+  return [lat1+t*(lat2-lat1), lon1+t*(lon2-lon1)];
+}
+
+// Samplear línea cada `intervalo` metros → [{lat,lon,distAcum,segIdx}]
+function samplearLinea(linea, intervalo) {
+  if(linea.length<2) return [];
+  var puntos=[];
+  var distAcum=0;
+  var proxDist=0; // próxima distancia a muestrear
+
+  // Siempre agregar punto inicial
+  puntos.push({lat:linea[0][0],lon:linea[0][1],distAcum:0,esQuiebre:true,qIdx:0});
+  proxDist=intervalo;
+
+  for(var i=0;i<linea.length-1;i++){
+    var lat1=linea[i][0],lon1=linea[i][1];
+    var lat2=linea[i+1][0],lon2=linea[i+1][1];
+    var segLen=haversine(lat1,lon1,lat2,lon2);
+    var segStart=distAcum;
+
+    // Insertar muestras dentro de este segmento
+    while(proxDist<=distAcum+segLen+1e-6){
+      var t=(proxDist-segStart)/segLen;
+      if(t<0) t=0; if(t>1) t=1;
+      var pt=interpolar(lat1,lon1,lat2,lon2,t);
+      puntos.push({lat:pt[0],lon:pt[1],distAcum:proxDist,esQuiebre:false,qIdx:-1});
+      proxDist+=intervalo;
+    }
+    distAcum+=segLen;
+
+    // Siempre agregar punto de quiebre (vértice intermedio y final)
+    if(i<linea.length-2){
+      // Quiebre intermedio: solo si no tenemos ya un punto muy cercano
+      var ultimo=puntos[puntos.length-1];
+      var dQ=Math.abs(ultimo.distAcum-distAcum);
+      if(dQ>intervalo*0.1){
+        puntos.push({lat:lat2,lon:lon2,distAcum:distAcum,esQuiebre:true,qIdx:i+1});
+      } else {
+        ultimo.esQuiebre=true; ultimo.qIdx=i+1;
+        ultimo.lat=lat2; ultimo.lon=lon2; ultimo.distAcum=distAcum;
+      }
+    }
+  }
+
+  // Punto final
+  var ult=linea[linea.length-1];
+  var ultPt=puntos[puntos.length-1];
+  var dFin=Math.abs(ultPt.distAcum-distAcum);
+  if(dFin>intervalo*0.1){
+    puntos.push({lat:ult[0],lon:ult[1],distAcum:distAcum,esQuiebre:true,qIdx:linea.length-1});
+  } else {
+    ultPt.esQuiebre=true; ultPt.qIdx=linea.length-1;
+    ultPt.lat=ult[0]; ultPt.lon=ult[1]; ultPt.distAcum=distAcum;
+  }
+
+  return puntos;
+}
+
+// ── FLUJO PRINCIPAL ──────────────────────────────────────────
+var _drawHandler = null; // handler L.Draw.Polyline activo
+
+function _updateDrawUI(nVertices){
+  document.getElementById('draw-count').textContent = nVertices;
+  // Necesitas ≥2 vértices para "terminar" una polyline válida
+  document.getElementById('btn-draw-finish').disabled = nVertices < 2;
+  document.getElementById('btn-draw-undo').disabled   = nVertices < 1;
+}
+
+function _setDrawMode(on){
+  document.getElementById('draw-actions').classList.toggle('active', !!on);
+  document.getElementById('btn-dibujar').disabled = !!on;
+  if(on) _updateDrawUI(0);
+}
+
+function iniciarDibujo() {
+  if(!drawCtrl) {sb('Mapa no listo aún','warn');return;}
+  // Limpiar estado previo
+  if(_drawHandler){ try{_drawHandler.disable();}catch(e){} _drawHandler=null; }
+  drawLayer.clearLayers();
+  _limpiarMarcadores();
+  G.linea=null; G.muestras=[]; G.listo=false;
+  document.getElementById('btn-procesar').disabled=true;
+  document.getElementById('sec-stats').style.display='none';
+  document.getElementById('sec-export').style.display='none';
+  _clearPerfil();
+  _updateSteps(1);
+  document.getElementById('hint').classList.add('hidden');
+
+  _drawHandler = new L.Draw.Polyline(map,{
+    shapeOptions:{color:'#00d4ff',weight:3,opacity:.9,dashArray:'6,4'},
+    showLength:true,metric:true,
+    allowIntersection:true,
+    // Evita que la toolbar intente mostrar el tooltip nativo
+    repeatMode:false
+  });
+  _drawHandler.enable();
+  _setDrawMode(true);
+  sb('Dibujando — clic en el mapa para agregar puntos');
+}
+
+// Terminar dibujo actual (≥2 puntos)
+function drawFinish(){
+  if(!_drawHandler) return;
+  try{
+    // _finishShape emite L.Draw.Event.CREATED cuando hay ≥2 vértices
+    _drawHandler._finishShape();
+  }catch(e){
+    // Fallback: deshabilitar y forzar creación manual si el handler lo permite
+    try{_drawHandler.disable();}catch(_){}
+  }
+}
+
+// Borrar último vértice agregado
+function drawUndo(){
+  if(!_drawHandler) return;
+  try{
+    _drawHandler.deleteLastVertex();
+    // Recalcular contador
+    var n = _drawHandler._markers ? _drawHandler._markers.length : 0;
+    _updateDrawUI(n);
+  }catch(e){}
+}
+
+// Cancelar sin crear nada
+function drawCancel(){
+  if(_drawHandler){
+    try{_drawHandler.disable();}catch(e){}
+    _drawHandler=null;
+  }
+  _setDrawMode(false);
+  // Si no hay línea previa, vuelve a mostrar la ayuda
+  if(!G.linea) document.getElementById('hint').classList.remove('hidden');
+  sb('Dibujo cancelado');
+}
+
+function _onLineaLista() {
+  document.getElementById('hint').classList.add('hidden');
+  document.getElementById('btn-procesar').disabled=false;
+  _updateSteps(2);
+  // Calcular distancia total aprox
+  var dt=0;
+  for(var i=0;i<G.linea.length-1;i++)
+    dt+=haversine(G.linea[i][0],G.linea[i][1],G.linea[i+1][0],G.linea[i+1][1]);
+  var intv=parseInt(document.getElementById('intervalo').value)||20;
+  var nPts=Math.ceil(dt/intv)+1;
+  sb('Línea con '+G.linea.length+' vértices — dist≈'+_fmtDist(dt)+' — ~'+nPts+' muestras');
+}
+
+async function procesarLinea() {
+  if(!G.linea||G.linea.length<2){sb('Dibuja una línea primero','warn');return;}
+
+  var intv=parseInt(document.getElementById('intervalo').value)||20;
+  var ds=document.getElementById('dataset').value;
+  G.nombre=document.getElementById('nombre').value||'Perfil-1';
+  G.intervalo=intv;
+
+  document.getElementById('btn-procesar').disabled=true;
+  document.getElementById('btn-dibujar').disabled=true;
+
+  prog(5,'Calculando puntos de muestreo...');
+  sb('Procesando...');
+
+  // 1. Samplear línea
+  var muestras=samplearLinea(G.linea,intv);
+  prog(8,'Descargando elevaciones para '+muestras.length+' puntos...');
+
+  // 2. Bajar elevaciones
+  var pts_ll=muestras.map(function(m){return [m.lat,m.lon];});
+  var elevs=await bajarElevaciones(pts_ll,ds);
+
+  // 3. Asignar elevaciones (z = zRaw inicialmente)
+  var nulos=0;
+  muestras.forEach(function(m,i){
+    m.zRaw = elevs[i];
+    m.z    = elevs[i];
+    if(m.z===null) nulos++;
+  });
+
+  if(nulos===muestras.length){
+    prog(0);
+    sb('❌ Sin elevaciones — usa python -m http.server 8080','err');
+    document.getElementById('btn-procesar').disabled=false;
+    document.getElementById('btn-dibujar').disabled=false;
+    return;
+  }
+
+  // Rellenar nulos por interpolación simple (en zRaw para que persista)
+  for(var i=0;i<muestras.length;i++){
+    if(muestras[i].zRaw===null){
+      var prev=null,next=null;
+      for(var j=i-1;j>=0;j--){if(muestras[j].zRaw!==null){prev=j;break;}}
+      for(var j=i+1;j<muestras.length;j++){if(muestras[j].zRaw!==null){next=j;break;}}
+      var nuevo=null;
+      if(prev!==null&&next!==null){
+        var t=(muestras[i].distAcum-muestras[prev].distAcum)/
+              (muestras[next].distAcum-muestras[prev].distAcum);
+        nuevo=muestras[prev].zRaw+t*(muestras[next].zRaw-muestras[prev].zRaw);
+      } else if(prev!==null){ nuevo=muestras[prev].zRaw; }
+      else if(next!==null){ nuevo=muestras[next].zRaw; }
+      muestras[i].zRaw=nuevo;
+      muestras[i].z=nuevo;
+    }
+  }
+
+  G.muestras=muestras;
+  G.listo=true;
+
+  // Aplicar suavizado según configuración actual
+  var modoSuav = document.getElementById('suav-modo').value;
+  var winSuav  = parseInt(document.getElementById('suav-win').value)||3;
+  if(modoSuav!=='none'){
+    var nuevasZ = aplicarSuavizado(muestras, modoSuav, winSuav);
+    muestras.forEach(function(m,i){ m.z = nuevasZ[i]; });
+    var mod = _contarModificados(muestras);
+    var info = document.getElementById('suav-info');
+    info.textContent = (modoSuav==='median')
+      ? mod+'/'+muestras.length+' puntos suavizados'
+      : mod+' outliers corregidos';
+  } else {
+    document.getElementById('suav-info').textContent='Sin suavizado';
+  }
+
+  prog(75,'Consultando features OSM...');
+  // Descargar features OSM (no bloquea si falla)
+  try{
+    await obtenerFeaturesOSM();
+  }catch(e){
+    console.warn('OSM fetch falló:', e);
+    document.getElementById('osm-info').textContent='(OSM no disponible)';
+  }
+
+  prog(95,'Dibujando perfil...');
+  _calcStats();
+  _dibujarPerfil();
+  _dibujarMarcadoresQuiebre();
+  _dibujarMarcadoresOSM();
+  prog(0);
+
+  _updateSteps(3);
+  document.getElementById('sec-stats').style.display='block';
+  document.getElementById('sec-export').style.display='block';
+  document.getElementById('btn-dibujar').disabled=false;
+  document.getElementById('btn-procesar').disabled=false;
+
+  var msg='✓ '+muestras.length+' puntos';
+  if(G.datasetUsado && G.datasetUsado!==ds) msg+=' (fallback: '+G.datasetUsado+')';
+  if(nulos>0) msg+=' ('+nulos+' interpolados)';
+  if(G.osm.length) msg+=' | '+G.osm.length+' features OSM';
+  sb(msg,'ok');
+}
+
+function limpiarTodo() {
+  if(drawLayer) drawLayer.clearLayers();
+  _limpiarMarcadores();
+  _limpiarMarcadoresOSM();
+  G.linea=null; G.muestras=[]; G.listo=false; G.osm=[];
+  document.getElementById('btn-procesar').disabled=true;
+  document.getElementById('sec-stats').style.display='none';
+  document.getElementById('sec-export').style.display='none';
+  document.getElementById('hint').classList.remove('hidden');
+  document.getElementById('suav-info').textContent='';
+  document.getElementById('osm-info').textContent='';
+  document.getElementById('osm-legend').classList.add('hidden');
+  _clearPerfil();
+  _updateSteps(1);
+  prog(0);
+  sb('Listo — dibuja una línea en el mapa');
+}
+
+// ── MARCADORES DE QUIEBRE ────────────────────────────────────
+var _marcadores=[];
+function _limpiarMarcadores(){
+  _marcadores.forEach(function(m){if(map)map.removeLayer(m);});
+  _marcadores=[];
+}
+function _dibujarMarcadoresQuiebre(){
+  _limpiarMarcadores();
+  if(!map||!G.muestras.length) return;
+  G.muestras.forEach(function(m,i){
+    if(!m.esQuiebre) return;
+    var isInicio=(i===0);
+    var isFin=(i===G.muestras.length-1);
+    var cls='quiebre-marker'+(isInicio?' inicio':isFin?' fin':'');
+    var icon=L.divIcon({className:'',html:'<div class="'+cls+'"></div>',iconSize:[10,10]});
+    var mk=L.marker([m.lat,m.lon],{icon:icon,zIndexOffset:500});
+    var zStr=m.z!==null?m.z.toFixed(1)+'m':'—';
+    mk.bindTooltip(
+      '<span style="font-family:var(--mono);font-size:10px">'+
+      (isInicio?'▶ Inicio':isFin?'■ Fin':'◆ Quiebre')+
+      '<br>z = '+zStr+
+      '<br>dist = '+_fmtDist(m.distAcum)+'</span>',
+      {permanent:false,direction:'top'}
+    );
+    mk.addTo(map);
+    _marcadores.push(mk);
+  });
+}
+
+// ── ESTADÍSTICAS ─────────────────────────────────────────────
+function _calcStats() {
+  var ms=G.muestras.filter(function(m){return m.z!==null;});
+  if(!ms.length) return;
+  var zs=ms.map(function(m){return m.z;});
+  var zmax=Math.max.apply(null,zs);
+  var zmin=Math.min.apply(null,zs);
+  var distTotal=G.muestras[G.muestras.length-1].distAcum;
+  var desnivel=zmax-zmin;
+  var pendiente=distTotal>0?(desnivel/distTotal*100):0;
+
+  document.getElementById('stat-dist').textContent=_fmtDist(distTotal);
+  document.getElementById('stat-pts').textContent=G.muestras.length;
+  document.getElementById('stat-zmax').textContent=zmax.toFixed(1)+'m';
+  document.getElementById('stat-zmin').textContent=zmin.toFixed(1)+'m';
+  document.getElementById('stat-desnivel').textContent=desnivel.toFixed(1)+'m';
+  document.getElementById('stat-pendiente').textContent=pendiente.toFixed(1)+'%';
+}
+
+function _fmtDist(m){
+  return m>=1000?(m/1000).toFixed(2)+'km':m.toFixed(0)+'m';
+}
+
+// ── PERFIL LONGITUDINAL ──────────────────────────────────────
+var _perfilData=null;
+
+function _clearPerfil(){
+  _perfilData=null;
+  var canvas=document.getElementById('perfil-canvas');
+  var ctx=canvas.getContext('2d');
+  // Resetear transform y limpiar en píxeles internos
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  document.getElementById('perfil-empty').style.display='flex';
+  document.getElementById('perfil-info').textContent='Sin datos';
+}
+
+function _dibujarPerfil(){
+  var ms=G.muestras;
+  if(!ms.length) return;
+  var canvas=document.getElementById('perfil-canvas');
+  var wrap=document.getElementById('canvas-wrap');
+
+  // Dimensiones CSS del contenedor (no del canvas — el canvas aún puede tener tamaño viejo)
+  var cssW = wrap.clientWidth  || 800;
+  var cssH = wrap.clientHeight || 200;
+
+  // Si el wrapper aún no tiene tamaño (flex no resuelto), reintentar al próximo frame.
+  if(cssW<50 || cssH<50){
+    requestAnimationFrame(_dibujarPerfil);
+    return;
+  }
+
+  // HiDPI: el canvas interno es cssW*dpr × cssH*dpr, pero dibujamos en coordenadas CSS.
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width  = cssW+'px';
+  canvas.style.height = cssH+'px';
+
+  var ctx=canvas.getContext('2d');
+  // Resetear cualquier transform previo y aplicar escala DPR
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+
+  // A partir de aquí trabajamos en coordenadas CSS: W y H son las del layout.
+  var W=cssW, H=cssH;
+
+  document.getElementById('perfil-empty').style.display='none';
+
+  // Márgenes — margen inferior más grande si vamos a mostrar etiquetas de curvas rotadas
+  var cnActivo = document.getElementById('cn-enable') && document.getElementById('cn-enable').checked;
+  var ml=58,mr=20,mt=16,mb=cnActivo?62:38;
+  var pw=W-ml-mr, ph=H-mt-mb;
+  if(pw<10 || ph<10) return; // panel demasiado chico para dibujar algo útil
+
+  // Rangos — ignorar nulls al calcular min/max
+  var zsValidos = ms.map(function(m){return m.z;}).filter(function(z){return z!==null && isFinite(z);});
+  if(zsValidos.length<2) return;
+  var zmin=Math.min.apply(null,zsValidos), zmax=Math.max.apply(null,zsValidos);
+  var zRange = zmax-zmin;
+  var zPad = zRange>0 ? zRange*0.15 : 5;
+  var z0=zmin-zPad, z1=zmax+zPad;
+  if(z1-z0 < 1) { z0 -= 5; z1 += 5; } // evita división por cero en perfiles planos
+  var distTotal=ms[ms.length-1].distAcum||1;
+
+  // Funciones de escala
+  function scaleX(d){return ml+d/distTotal*pw;}
+  function scaleY(z){return mt+ph-(z-z0)/(z1-z0)*ph;}
+
+  // Guardar para tooltip (cssW/cssH, no el canvas.width interno)
+  _perfilData={ms:ms,scaleX:scaleX,scaleY:scaleY,ml:ml,mt:mt,pw:pw,ph:ph,
+               z0:z0,z1:z1,distTotal:distTotal,W:W,H:H};
+
+  // Fondo grid
+  ctx.strokeStyle='#1a2535';ctx.lineWidth=1;
+  // Grid horizontal (Z)
+  var nGrid=5;
+  var zStep=_niceStep((z1-z0)/nGrid);
+  var zGridStart=Math.ceil(z0/zStep)*zStep;
+  ctx.font='9px Space Mono,monospace';
+  ctx.fillStyle='#3d4f6e';
+  ctx.textAlign='right';
+  ctx.textBaseline='middle';
+  for(var zg=zGridStart;zg<=z1+zStep*0.1;zg+=zStep){
+    var yg=scaleY(zg);
+    if(yg<mt-0.5||yg>mt+ph+0.5) continue;
+    ctx.beginPath();ctx.moveTo(ml,yg);ctx.lineTo(ml+pw,yg);ctx.stroke();
+    ctx.fillText(zg.toFixed(0),ml-6,yg);
+  }
+  // Grid vertical (dist)
+  var dStep=_niceStep(distTotal/6);
+  ctx.textAlign='center';
+  ctx.textBaseline='top';
+  var dLabelOffset = cnActivo ? 30 : 6; // deja espacio para etiquetas de cota rotadas
+  for(var dg=0;dg<=distTotal+dStep*0.1;dg+=dStep){
+    var xg=scaleX(dg);
+    ctx.beginPath();ctx.moveTo(xg,mt);ctx.lineTo(xg,mt+ph);ctx.stroke();
+    ctx.fillText(_fmtDist(dg),xg,mt+ph+dLabelOffset);
+  }
+
+  // Ejes
+  ctx.strokeStyle='#243552';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);
+  ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+
+  // Área rellena bajo el perfil
+  var msValidos=ms.filter(function(m){return m.z!==null && isFinite(m.z);});
+  if(msValidos.length<2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(scaleX(msValidos[0].distAcum),mt+ph);
+  msValidos.forEach(function(m){ctx.lineTo(scaleX(m.distAcum),scaleY(m.z));});
+  ctx.lineTo(scaleX(msValidos[msValidos.length-1].distAcum),mt+ph);
+  ctx.closePath();
+  var grad=ctx.createLinearGradient(0,mt,0,mt+ph);
+  grad.addColorStop(0,'rgba(0,212,255,0.35)');
+  grad.addColorStop(0.6,'rgba(0,212,255,0.08)');
+  grad.addColorStop(1,'rgba(0,212,255,0.02)');
+  ctx.fillStyle=grad;
+  ctx.fill();
+
+  // Línea del perfil
+  ctx.beginPath();
+  ctx.strokeStyle='#00d4ff';ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';
+  msValidos.forEach(function(m,i){
+    var x=scaleX(m.distAcum), y=scaleY(m.z);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Marcadores de quiebre
+  ms.forEach(function(m){
+    if(!m.esQuiebre||m.z===null||!isFinite(m.z)) return;
+    var x=scaleX(m.distAcum), y=scaleY(m.z);
+    var isI=(m.qIdx===0), isF=(m.qIdx===G.linea.length-1);
+    var col=isI?'#00ff9d':isF?'#ff4757':'#ffb300';
+    // Línea vertical punteada primero (para que quede bajo el círculo)
+    ctx.beginPath();ctx.setLineDash([3,3]);
+    ctx.strokeStyle=col+'66';ctx.lineWidth=1;
+    ctx.moveTo(x,y+5);ctx.lineTo(x,mt+ph);ctx.stroke();
+    ctx.setLineDash([]);
+    // Círculo
+    ctx.beginPath();
+    ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle='#080c14';ctx.lineWidth=1.5;ctx.stroke();
+    // Etiqueta Z
+    ctx.fillStyle=col;ctx.font='bold 9px Space Mono,monospace';
+    ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(m.z.toFixed(0)+'m',x,y-8);
+  });
+
+  // ── Cruces con curvas de nivel ──────────────────────────────────────
+  var cnEnable = document.getElementById('cn-enable').checked;
+  if(cnEnable){
+    var equi = _equiEfectiva();
+    var cruces = calcularCrucesCotas(ms, equi);
+    // Dibujo: tick corto bajo el eje X + etiqueta de cota en la progresiva del cruce,
+    // con decimación inteligente si hay demasiados para no saturar.
+    var nCruces = cruces.length;
+    // Si hay más cruces que espacio horizontal (cada etiqueta necesita ~30px), decimar
+    var maxLabels = Math.max(4, Math.floor(pw/32));
+    var step = Math.max(1, Math.ceil(nCruces/maxLabels));
+
+    ctx.save();
+    cruces.forEach(function(c, idx){
+      var x = scaleX(c.prog);
+      if(x<ml-0.5 || x>ml+pw+0.5) return;
+      // Tick corto sobre el eje X
+      ctx.strokeStyle = c.subiendo ? 'rgba(0,255,157,0.55)' : 'rgba(255,179,0,0.55)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(x, mt+ph);
+      ctx.lineTo(x, mt+ph+4);
+      ctx.stroke();
+      // Etiqueta (solo una de cada `step`, y siempre la primera y última)
+      var mostrar = (idx%step===0) || idx===0 || idx===nCruces-1;
+      if(mostrar){
+        ctx.fillStyle='#8ea3c5';
+        ctx.font='8px Space Mono,monospace';
+        ctx.textAlign='center';
+        ctx.textBaseline='top';
+        // Etiqueta rotada 90° para que no se solapen, pegada bajo el eje
+        ctx.save();
+        ctx.translate(x, mt+ph+6);
+        ctx.rotate(-Math.PI/2);
+        ctx.textAlign='right';
+        ctx.fillText(c.cota.toFixed(c.cota%1===0?0:1), 0, 3);
+        ctx.restore();
+      }
+    });
+    ctx.restore();
+
+    // Info en el panel
+    document.getElementById('cn-info').textContent =
+      cruces.length+' cruces · equi '+equi+'m'+
+      (document.getElementById('cn-equi').value==='auto'?' (auto)':'');
+  } else {
+    document.getElementById('cn-info').textContent = 'Desactivado';
+  }
+
+  // ── Marcadores OSM: líneas verticales con iconos sobre la curva ─────
+  if(G.osm && G.osm.length){
+    // Para evitar superposición visual de iconos en la misma X, apilamos verticalmente
+    var iconosPorX = {};
+    G.osm.forEach(function(f){
+      if(f.prog<0 || f.prog>distTotal) return;
+      var x = scaleX(f.prog);
+      // Interpolar Y sobre la curva del perfil en esa progresiva
+      var yCurva = _yCurvaEnProg(f.prog, msValidos, scaleX, scaleY);
+      if(yCurva===null) return;
+      var def = OSM_CATS[f.cat];
+      // Línea vertical tenue desde el eje hasta la curva
+      ctx.beginPath();
+      ctx.setLineDash([2,3]);
+      ctx.strokeStyle=def.color+'55';
+      ctx.lineWidth=1;
+      ctx.moveTo(x, mt+ph);
+      ctx.lineTo(x, yCurva);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Apilado vertical de iconos: cuenta cuántos ya hay en columnas cercanas
+      var bucket = Math.round(x/14);
+      iconosPorX[bucket] = (iconosPorX[bucket]||0);
+      var nivel = iconosPorX[bucket]++;
+      // Icono rectangular con símbolo por encima de la curva
+      var iconY = yCurva - 14 - nivel*14;
+      if(iconY < mt+2) iconY = mt+2 + nivel*12;
+      ctx.beginPath();
+      ctx.fillStyle=def.color;
+      ctx.strokeStyle='#080c14';
+      ctx.lineWidth=1;
+      ctx.rect(x-5, iconY-5, 10, 10);
+      ctx.fill();
+      ctx.stroke();
+      // Símbolo dentro
+      ctx.fillStyle='#080c14';
+      ctx.font='bold 9px Space Mono,monospace';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(def.icon, x, iconY);
+    });
+    _drawOSMLegend();
+  } else {
+    document.getElementById('osm-legend').classList.add('hidden');
+  }
+
+  // Labels ejes
+  ctx.fillStyle='#6b7fa3';ctx.font='9px Space Mono,monospace';
+  ctx.textBaseline='alphabetic';
+  ctx.save();ctx.translate(12,mt+ph/2);ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center';ctx.fillText('COTA (m)',0,0);ctx.restore();
+  ctx.textAlign='center';
+  ctx.fillText('DISTANCIA',ml+pw/2,mt+ph+(cnActivo?48:26));
+
+  // Info header
+  var distTotal2=ms[ms.length-1].distAcum;
+  document.getElementById('perfil-info').textContent=
+    _fmtDist(distTotal2)+' | '+ms.length+' pts | Δz='+
+    (zmax-zmin).toFixed(1)+'m';
+}
+
+function _niceStep(approx){
+  var mag=Math.pow(10,Math.floor(Math.log10(approx)));
+  var norm=approx/mag;
+  if(norm<1.5) return mag;
+  if(norm<3) return 2*mag;
+  if(norm<7) return 5*mag;
+  return 10*mag;
+}
+
+// Interpola Y sobre la curva del perfil a una progresiva dada
+function _yCurvaEnProg(prog, msValidos, scaleX, scaleY){
+  if(!msValidos || msValidos.length<2) return null;
+  for(var i=0;i<msValidos.length-1;i++){
+    var d0=msValidos[i].distAcum, d1=msValidos[i+1].distAcum;
+    if(prog>=d0 && prog<=d1){
+      var t = (d1===d0) ? 0 : (prog-d0)/(d1-d0);
+      var z = msValidos[i].z + t*(msValidos[i+1].z-msValidos[i].z);
+      return scaleY(z);
+    }
+  }
+  // Fuera del rango: retornar extremo
+  if(prog<msValidos[0].distAcum) return scaleY(msValidos[0].z);
+  return scaleY(msValidos[msValidos.length-1].z);
+}
+
+// Dibuja la leyenda OSM en el canvas wrap (div HTML, no canvas)
+function _drawOSMLegend(){
+  var leg=document.getElementById('osm-legend');
+  if(!G.osm || !G.osm.length){ leg.classList.add('hidden'); return; }
+  var cats={};
+  G.osm.forEach(function(f){ cats[f.cat]=true; });
+  var items=Object.keys(cats).map(function(k){
+    var def=OSM_CATS[k];
+    return '<div class="li"><span class="sw" style="background:'+def.color+'"></span>'+def.label+'</div>';
+  }).join('');
+  leg.innerHTML=items;
+  leg.classList.remove('hidden');
+}
+
+// Tooltip hover en perfil
+(function(){
+  var canvas;
+  function setup(){
+    canvas=document.getElementById('perfil-canvas');
+    canvas.addEventListener('mousemove',onMove);
+    canvas.addEventListener('mouseleave',function(){
+      document.getElementById('perfil-tooltip').style.display='none';
+    });
+  }
+  function onMove(e){
+    if(!_perfilData) return;
+    var pd=_perfilData;
+    var rect=canvas.getBoundingClientRect();
+    var mx=e.clientX-rect.left;
+    var my=e.clientY-rect.top;
+    if(mx<pd.ml||mx>pd.ml+pd.pw||my<pd.mt||my>pd.mt+pd.ph){
+      document.getElementById('perfil-tooltip').style.display='none';return;
+    }
+    // Distancia correspondiente al cursor
+    var dCursor=(mx-pd.ml)/pd.pw*pd.distTotal;
+    // Punto más cercano
+    var best=null, bestD=Infinity;
+    pd.ms.forEach(function(m){
+      var d=Math.abs(m.distAcum-dCursor);
+      if(d<bestD){bestD=d;best=m;}
+    });
+    if(!best||best.z===null) return;
+    var tt=document.getElementById('perfil-tooltip');
+    tt.innerHTML=
+      '<span style="color:var(--accent)">z</span> '+best.z.toFixed(1)+'m<br>'+
+      '<span style="color:var(--txt2)">d</span> '+_fmtDist(best.distAcum)+
+      (best.esQuiebre?'<br><span style="color:var(--warn)">◆ quiebre</span>':'');
+    tt.style.display='block';
+    tt.style.left=(mx+12)+'px';
+    tt.style.top=(my-10)+'px';
+  }
+  document.addEventListener('DOMContentLoaded',setup);
+  setTimeout(setup,2000);
+}());
+
+// Resizable divider
+(function(){
+  var div,perfilWrap,startY,startH,dragging=false;
+  function setup(){
+    div=document.getElementById('divider');
+    perfilWrap=document.getElementById('perfil-wrap');
+    div.addEventListener('mousedown',function(e){
+      dragging=true;startY=e.clientY;
+      startH=perfilWrap.offsetHeight;
+      div.classList.add('dragging');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove',function(e){
+      if(!dragging) return;
+      var delta=startY-e.clientY;
+      var newH=Math.max(100,Math.min(startH+delta,window.innerHeight*0.7));
+      perfilWrap.style.height=newH+'px';
+      // Re-draw perfil si hay datos
+      if(_perfilData){
+        _dibujarPerfil();
+      }
+      // Avisar a Leaflet que el contenedor del mapa cambió de tamaño
+      if(map){ try{ map.invalidateSize(false); }catch(_){} }
+    });
+    document.addEventListener('mouseup',function(){
+      if(!dragging) return;
+      dragging=false;div.classList.remove('dragging');
+      // Un último invalidateSize al soltar, por si el mousemove final no disparó
+      if(map){ try{ map.invalidateSize(true); }catch(_){} }
+    });
+  }
+  document.addEventListener('DOMContentLoaded',setup);
+  setTimeout(setup,1000);
+}());
+
+// Redibujar perfil al redimensionar ventana
+window.addEventListener('resize',function(){
+  if(_perfilData) _dibujarPerfil();
+  if(map){ try{ map.invalidateSize(false); }catch(_){} }
+});
+
+// ── EXPORTAR ─────────────────────────────────────────────────
+function exportarKML(){
+  if(!G.listo||!G.muestras.length){sb('Procesa una línea primero','warn');return;}
+  var ms=G.muestras;
+  var nombre=G.nombre;
+  var fecha=new Date().toISOString().slice(0,10);
+
+  var coords=ms.map(function(m){
+    return '          '+m.lon.toFixed(8)+','+m.lat.toFixed(8)+','+(m.z||0).toFixed(2);
+  }).join('\n');
+
+  var placemarks=ms.map(function(m,i){
+    if(!m.esQuiebre&&i!==0&&i!==ms.length-1) return '';
+    var tipo=i===0?'Inicio':i===ms.length-1?'Fin':'Quiebre';
+    return [
+      '    <Placemark>',
+      '      <name>'+tipo+' — '+_fmtDist(m.distAcum)+'</name>',
+      '      <description>z='+((m.z||0).toFixed(2))+'m | dist='+_fmtDist(m.distAcum)+'</description>',
+      '      <styleUrl>#pt_'+tipo.toLowerCase()+'</styleUrl>',
+      '      <Point><coordinates>'+m.lon.toFixed(8)+','+m.lat.toFixed(8)+','+((m.z||0).toFixed(2))+'</coordinates></Point>',
+      '    </Placemark>'
+    ].join('\n');
+  }).filter(Boolean).join('\n');
+
+  // KML usa aabbggrr (alfa + BGR invertido respecto al hex HTML)
+  function _rgbToKml(hex){
+    var h=hex.replace('#','');
+    return 'ff'+h.substr(4,2)+h.substr(2,2)+h.substr(0,2);
+  }
+  var osmStyles = Object.keys(OSM_CATS).map(function(k){
+    var def=OSM_CATS[k];
+    return '    <Style id="osm_'+k+'"><IconStyle><color>'+_rgbToKml(def.color)+
+           '</color><scale>0.9</scale></IconStyle></Style>';
+  }).join('\n');
+  var osmPlacemarks = (G.osm||[]).map(function(f){
+    var def=OSM_CATS[f.cat];
+    var nom = (f.nombre||def.label).replace(/[<>&]/g,'');
+    return [
+      '    <Placemark>',
+      '      <n>'+def.label+': '+nom+'</n>',
+      '      <description>prog='+_fmtDist(f.prog)+
+        (f.distPerp>0?' | perp='+f.distPerp.toFixed(0)+'m':'')+
+        ' | tipo='+f.tipo+'</description>',
+      '      <styleUrl>#osm_'+f.cat+'</styleUrl>',
+      '      <Point><coordinates>'+f.lon.toFixed(8)+','+f.lat.toFixed(8)+',0</coordinates></Point>',
+      '    </Placemark>'
+    ].join('\n');
+  }).join('\n');
+
+  var kml=[
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<kml xmlns="http://www.opengis.net/kml/2.2">',
+    '  <Document>',
+    '    <name>'+nombre+'</name>',
+    '    <description>Perfil topográfico generado '+fecha+' por Wladimir Campos | '+ms.length+' puntos | intervalo '+G.intervalo+'m</description>',
+    '    <Style id="linea_estilo">',
+    '      <LineStyle><color>ff00d4ff</color><width>3</width></LineStyle>',
+    '    </Style>',
+    '    <Style id="pt_inicio"><IconStyle><color>ff9dff00</color><scale>1.2</scale></IconStyle></Style>',
+    '    <Style id="pt_fin"><IconStyle><color>ff5747ff</color><scale>1.2</scale></IconStyle></Style>',
+    '    <Style id="pt_quiebre"><IconStyle><color>ff00b3ff</color><scale>0.9</scale></IconStyle></Style>',
+    osmStyles,
+    '    <Placemark>',
+    '      <name>Trazado — '+nombre+'</name>',
+    '      <styleUrl>#linea_estilo</styleUrl>',
+    '      <LineString>',
+    '        <extrude>1</extrude>',
+    '        <tessellate>1</tessellate>',
+    '        <altitudeMode>absolute</altitudeMode>',
+    '        <coordinates>',
+    coords,
+    '        </coordinates>',
+    '      </LineString>',
+    '    </Placemark>',
+    placemarks,
+    osmPlacemarks,
+    '  </Document>',
+    '</kml>'
+  ].join('\n');
+
+  _descargar(kml, nombre+'.kml', 'application/vnd.google-earth.kml+xml');
+  sb('KML exportado: '+nombre+'.kml','ok');
+}
+
+function exportarJSON(){
+  if(!G.listo||!G.muestras.length){sb('Procesa una línea primero','warn');return;}
+  var ms=G.muestras;
+  var distTotal=ms[ms.length-1].distAcum;
+  var zs=ms.map(function(m){return m.z||0;});
+
+  var data={
+    nombre: G.nombre,
+    autor: 'Wladimir Campos',
+    fecha: new Date().toISOString().slice(0,10),
+    generado: new Date().toISOString(),
+    intervalo_m: G.intervalo,
+    dataset_solicitado: document.getElementById('dataset').value,
+    dataset_usado: G.datasetUsado,
+    suavizado: {
+      modo: document.getElementById('suav-modo').value,
+      ventana: parseInt(document.getElementById('suav-win').value)||3
+    },
+    distancia_total_m: Math.round(distTotal*100)/100,
+    distancia_total_km: Math.round(distTotal/10)/100,
+    estadisticas:{
+      puntos: ms.length,
+      cota_maxima: Math.max.apply(null,zs),
+      cota_minima: Math.min.apply(null,zs),
+      desnivel: Math.max.apply(null,zs)-Math.min.apply(null,zs),
+      pendiente_media_pct: distTotal>0?
+        Math.round((Math.max.apply(null,zs)-Math.min.apply(null,zs))/distTotal*10000)/100:0
+    },
+    puntos: ms.map(function(m){
+      return {
+        lat: Math.round(m.lat*1e8)/1e8,
+        lon: Math.round(m.lon*1e8)/1e8,
+        z:     m.z!==null   ?Math.round(m.z*100)/100:null,
+        z_raw: m.zRaw!==null?Math.round(m.zRaw*100)/100:null,
+        dist_acum_m: Math.round(m.distAcum*100)/100,
+        es_quiebre: m.esQuiebre
+      };
+    }),
+    quiebres: ms.filter(function(m){return m.esQuiebre;}).map(function(m){
+      return {
+        lat: Math.round(m.lat*1e8)/1e8,
+        lon: Math.round(m.lon*1e8)/1e8,
+        z:   m.z!==null?Math.round(m.z*100)/100:null,
+        dist_acum_m: Math.round(m.distAcum*100)/100
+      };
+    }),
+    osm_features: (G.osm||[]).map(function(f){
+      return {
+        categoria: f.cat,
+        nombre: f.nombre||null,
+        tipo: f.tipo,
+        lat: Math.round(f.lat*1e8)/1e8,
+        lon: Math.round(f.lon*1e8)/1e8,
+        progresiva_m: Math.round(f.prog*100)/100,
+        distancia_perp_m: Math.round(f.distPerp*100)/100,
+        tags: f.tags||{}
+      };
+    }),
+    curvas_de_nivel: (function(){
+      if(!document.getElementById('cn-enable').checked) return null;
+      var equi = _equiEfectiva();
+      var cr = calcularCrucesCotas(ms, equi);
+      return {
+        equidistancia_m: equi,
+        modo: document.getElementById('cn-equi').value,
+        cruces: cr.map(function(c){
+          return {
+            cota_m: c.cota,
+            progresiva_m: Math.round(c.prog*100)/100,
+            sentido: c.subiendo?'subiendo':'bajando'
+          };
+        })
+      };
+    })(),
+    trazado_original: G.linea.map(function(ll){
+      return {lat:Math.round(ll[0]*1e8)/1e8, lon:Math.round(ll[1]*1e8)/1e8};
+    })
+  };
+
+  _descargar(JSON.stringify(data,null,2), G.nombre+'.json','application/json');
+  sb('JSON exportado: '+G.nombre+'.json','ok');
+}
+
+function exportarCSV(){
+  if(!G.listo||!G.muestras.length){sb('Procesa una línea primero','warn');return;}
+  var rows=['N,Latitud,Longitud,Elevacion_m,Elevacion_raw_m,Distancia_acum_m,Es_quiebre'];
+  G.muestras.forEach(function(m,i){
+    rows.push([
+      i+1,
+      m.lat.toFixed(8),
+      m.lon.toFixed(8),
+      m.z!==null?m.z.toFixed(2):'',
+      (m.zRaw!==null&&m.zRaw!==undefined)?m.zRaw.toFixed(2):'',
+      m.distAcum.toFixed(2),
+      m.esQuiebre?'SI':'NO'
+    ].join(','));
+  });
+  // Sección OSM (si hay)
+  if(G.osm && G.osm.length){
+    rows.push('');
+    rows.push('# FEATURES OSM');
+    rows.push('Categoria,Nombre,Tipo,Latitud,Longitud,Progresiva_m,Dist_perp_m');
+    G.osm.forEach(function(f){
+      var nombre=(f.nombre||'').replace(/[,\n]/g,' ');
+      rows.push([
+        f.cat,
+        '"'+nombre+'"',
+        f.tipo,
+        f.lat.toFixed(8),
+        f.lon.toFixed(8),
+        f.prog.toFixed(2),
+        f.distPerp.toFixed(2)
+      ].join(','));
+    });
+  }
+  // Sección curvas de nivel (si está habilitado)
+  if(document.getElementById('cn-enable').checked){
+    var equi = _equiEfectiva();
+    var cr = calcularCrucesCotas(G.muestras, equi);
+    if(cr.length){
+      rows.push('');
+      rows.push('# CURVAS DE NIVEL (equidistancia '+equi+'m)');
+      rows.push('Cota_m,Progresiva_m,Sentido');
+      cr.forEach(function(c){
+        rows.push([
+          c.cota.toFixed(c.cota%1===0?0:2),
+          c.prog.toFixed(2),
+          c.subiendo?'subiendo':'bajando'
+        ].join(','));
+      });
+    }
+  }
+  _descargar(rows.join('\n'), G.nombre+'.csv','text/csv');
+  sb('CSV exportado: '+G.nombre+'.csv','ok');
+}
+
+// Genera los datos de puntos en el formato común: Nombre punto, Distancia Parcial, Cota.
+// La distancia parcial es la distancia entre cada punto y el anterior (no la acumulada).
+function _datosParaExportTopo(){
+  var ms = G.muestras;
+  var filas = [];
+  ms.forEach(function(m, i){
+    var nombre;
+    if(i===0) nombre = 'P-INICIO';
+    else if(i===ms.length-1) nombre = 'P-FIN';
+    else if(m.esQuiebre) nombre = 'Q-'+String(m.qIdx).padStart(2,'0');
+    else nombre = 'P-'+String(i).padStart(3,'0');
+
+    var parcial = (i===0) ? 0 : (m.distAcum - ms[i-1].distAcum);
+    filas.push({
+      nombre: nombre,
+      parcial: parcial,
+      cota: (m.z!==null && isFinite(m.z)) ? m.z : null,
+      // Campos auxiliares por si se necesitan en resumen
+      acum: m.distAcum,
+      lat: m.lat,
+      lon: m.lon,
+      esQuiebre: m.esQuiebre
+    });
+  });
+  return filas;
+}
+
+// Interpola la cota del perfil en una progresiva dada, usando las muestras.
+// Devuelve null si cae fuera del rango o no hay datos válidos alrededor.
+function _cotaEnProgresiva(prog){
+  var ms = G.muestras;
+  if(!ms || ms.length<2) return null;
+  if(prog <= ms[0].distAcum) return (ms[0].z!==null && isFinite(ms[0].z)) ? ms[0].z : null;
+  if(prog >= ms[ms.length-1].distAcum) {
+    var zUlt = ms[ms.length-1].z;
+    return (zUlt!==null && isFinite(zUlt)) ? zUlt : null;
+  }
+  for(var i=0;i<ms.length-1;i++){
+    var d0 = ms[i].distAcum, d1 = ms[i+1].distAcum;
+    if(prog>=d0 && prog<=d1){
+      var z0 = ms[i].z, z1 = ms[i+1].z;
+      if(z0===null || z1===null || !isFinite(z0) || !isFinite(z1)) return null;
+      if(d1===d0) return z0;
+      var t = (prog-d0)/(d1-d0);
+      return z0 + t*(z1-z0);
+    }
+  }
+  return null;
+}
+
+// Entrelaza muestras con features OSM ordenadas por progresiva.
+// Cada fila: {nombre, parcial, cota, acum, lat, lon, tipo, osmNombre?, osmCat?}
+// tipo: 'inicio' | 'fin' | 'quiebre' | 'punto' | 'osm'
+// Las distancias parciales se recalculan tras la inserción.
+function _datosParaExportTopoIntegrado(){
+  var ms = G.muestras;
+  var filas = [];
+  // 1) Agregar muestras regulares
+  ms.forEach(function(m, i){
+    var nombre, tipo;
+    if(i===0){ nombre='P-INICIO'; tipo='inicio'; }
+    else if(i===ms.length-1){ nombre='P-FIN'; tipo='fin'; }
+    else if(m.esQuiebre){ nombre='Q-'+String(m.qIdx).padStart(2,'0'); tipo='quiebre'; }
+    else { nombre='P-'+String(i).padStart(3,'0'); tipo='punto'; }
+    filas.push({
+      nombre: nombre,
+      tipo: tipo,
+      acum: m.distAcum,
+      cota: (m.z!==null && isFinite(m.z)) ? m.z : null,
+      lat: m.lat, lon: m.lon,
+      esQuiebre: m.esQuiebre,
+      osmNombre: null, osmCat: null
+    });
+  });
+  // 2) Agregar features OSM, numeradas por categoría según orden de progresiva
+  if(G.osm && G.osm.length){
+    var contador = {};
+    // G.osm ya está ordenado por prog, garantizamos el orden
+    var osmOrdenado = G.osm.slice().sort(function(a,b){return a.prog-b.prog;});
+    osmOrdenado.forEach(function(f){
+      var def = OSM_CATS[f.cat];
+      if(!def) return;
+      contador[f.cat] = (contador[f.cat]||0) + 1;
+      var nombre = def.prefix+'-'+String(contador[f.cat]).padStart(2,'0');
+      // Cota por interpolación sobre el perfil en la progresiva del cruce
+      var cota = _cotaEnProgresiva(f.prog);
+      filas.push({
+        nombre: nombre,
+        tipo: 'osm',
+        acum: f.prog,
+        cota: cota,
+        lat: f.lat, lon: f.lon,
+        esQuiebre: false,
+        osmNombre: f.nombre || null,
+        osmCat: f.cat
+      });
+    });
+  }
+  // 3) Ordenar todo por progresiva (acum); en empate, los puntos del perfil primero
+  filas.sort(function(a,b){
+    if(a.acum !== b.acum) return a.acum - b.acum;
+    // Mismo acum: los OSM después de los puntos regulares
+    if(a.tipo==='osm' && b.tipo!=='osm') return 1;
+    if(b.tipo==='osm' && a.tipo!=='osm') return -1;
+    return 0;
+  });
+  // 4) Recalcular distancia parcial
+  filas.forEach(function(f, i){
+    f.parcial = (i===0) ? 0 : (f.acum - filas[i-1].acum);
+  });
+  return filas;
+}
+
+// ── EXPORT TXT ───────────────────────────────────────────────
+// Formato: tabla de texto plano alineada, columnas Nombre / Distancia Parcial / Cota.
+// Incluye encabezado con metadatos y bloques adicionales (OSM y curvas de nivel).
+function exportarTXT(){
+  try {
+    if(!G.listo || !G.muestras.length){
+      sb('Procesa una linea primero','warn');
+      return;
+    }
+
+    var filas = _datosParaExportTopoIntegrado();
+    if(!filas || !filas.length){
+      sb('No hay puntos para exportar','warn');
+      return;
+    }
+
+    // Ancho fijo por columna: nombre 12, distancia 14, cota 12
+    function pad(txt, ancho, derecha){
+      txt = String(txt);
+      if(txt.length >= ancho) return txt.slice(0, ancho);
+      var relleno = new Array(ancho - txt.length + 1).join(' ');
+      return derecha ? relleno + txt : txt + relleno;
+    }
+
+    var lineas = [];
+    for(var i=0;i<filas.length;i++){
+      var f = filas[i];
+      var nombre   = f.nombre || ('P-' + i);
+      var parcial  = (typeof f.parcial === 'number' && isFinite(f.parcial)) ? f.parcial.toFixed(2) : '0.00';
+      var cota     = (f.cota !== null && typeof f.cota === 'number' && isFinite(f.cota)) ? f.cota.toFixed(2) : '';
+      lineas.push( pad(nombre,12) + pad(parcial,14,true) + pad(cota,12,true) );
+    }
+
+    var contenido = lineas.join('\r\n') + '\r\n';
+    _descargar(contenido, (G.nombre || 'Perfil') + '.txt', 'text/plain');
+    sb('TXT exportado: ' + (G.nombre || 'Perfil') + '.txt','ok');
+  } catch(err){
+    // Mostramos el error en el status bar para poder diagnosticarlo
+    sb('Error TXT: ' + (err && err.message ? err.message : err),'err');
+    if(typeof console !== 'undefined') console.error('exportarTXT error:', err);
+  }
+}
+
+// ── EXPORT XLSX ──────────────────────────────────────────────
+// Usa SheetJS (cargado vía CDN en el loader).
+function exportarXLSX(){
+  if(!G.listo||!G.muestras.length){sb('Procesa una línea primero','warn');return;}
+  if(typeof XLSX==='undefined'){
+    sb('XLSX no cargado — revisa conexión a CDN','err');
+    return;
+  }
+  var filas = _datosParaExportTopoIntegrado();
+  var fecha = new Date().toISOString().slice(0,10);
+  var dsSolicitado = document.getElementById('dataset').value;
+  var distTotal = G.muestras[G.muestras.length-1].distAcum;
+  var zs = G.muestras.map(function(m){return m.z;}).filter(function(z){return z!==null && isFinite(z);});
+  var zmax = zs.length ? Math.max.apply(null,zs) : 0;
+  var zmin = zs.length ? Math.min.apply(null,zs) : 0;
+
+  var wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: Puntos (formato topográfico, OSM entrelazado) ──────
+  var aoa1 = [];
+  aoa1.push(['PERFIL TOPOGRÁFICO — '+G.nombre]);
+  aoa1.push(['Autor', 'Wladimir Campos']);
+  aoa1.push(['Fecha', fecha]);
+  aoa1.push(['Intervalo (m)', G.intervalo]);
+  aoa1.push(['Dataset', dsSolicitado + (G.datasetUsado && G.datasetUsado!==dsSolicitado ? ' (usado: '+G.datasetUsado+')' : '')]);
+  aoa1.push(['Suavizado', document.getElementById('suav-modo').value+' (ventana '+document.getElementById('suav-win').value+')']);
+  aoa1.push(['Distancia total (m)', Math.round(distTotal*100)/100]);
+  aoa1.push(['Nº puntos perfil', G.muestras.length]);
+  aoa1.push(['Nº features OSM', G.osm ? G.osm.length : 0]);
+  aoa1.push(['Cota máx (m)', Math.round(zmax*100)/100]);
+  aoa1.push(['Cota mín (m)', Math.round(zmin*100)/100]);
+  aoa1.push(['Desnivel (m)', Math.round((zmax-zmin)*100)/100]);
+  aoa1.push([]);
+  aoa1.push(['Nombre punto', 'Distancia Parcial (m)', 'Cota (m)', 'Observación']);
+  filas.forEach(function(f){
+    var obs = '';
+    if(f.tipo==='osm'){
+      obs = OSM_CATS[f.osmCat].label;
+      if(f.osmNombre) obs += ' — ' + f.osmNombre;
+    } else if(f.tipo==='inicio'){ obs = 'Inicio del perfil'; }
+    else if(f.tipo==='fin'){ obs = 'Fin del perfil'; }
+    else if(f.tipo==='quiebre'){ obs = 'Quiebre del trazado'; }
+
+    aoa1.push([
+      f.nombre,
+      Math.round(f.parcial*100)/100,
+      f.cota!==null ? Math.round(f.cota*100)/100 : '',
+      obs
+    ]);
+  });
+  var ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+  ws1['!cols'] = [{wch:16},{wch:22},{wch:14},{wch:40}];
+  ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Puntos');
+
+  // ── Hoja 2: Detalle (todo con lat/lon/dist acum/tipo) ──────────
+  var aoa2 = [];
+  aoa2.push(['N','Nombre','Tipo','Latitud','Longitud','Dist.Parcial(m)','Dist.Acum(m)','Cota(m)','Observación']);
+  filas.forEach(function(f,i){
+    var obs = '';
+    if(f.tipo==='osm'){
+      obs = OSM_CATS[f.osmCat].label + (f.osmNombre ? ' — '+f.osmNombre : '');
+    } else if(f.tipo==='inicio'){ obs = 'Inicio'; }
+    else if(f.tipo==='fin'){ obs = 'Fin'; }
+    else if(f.tipo==='quiebre'){ obs = 'Quiebre'; }
+    aoa2.push([
+      i+1,
+      f.nombre,
+      f.tipo,
+      Math.round(f.lat*1e8)/1e8,
+      Math.round(f.lon*1e8)/1e8,
+      Math.round(f.parcial*100)/100,
+      Math.round(f.acum*100)/100,
+      f.cota!==null ? Math.round(f.cota*100)/100 : '',
+      obs
+    ]);
+  });
+  var ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+  ws2['!cols'] = [{wch:5},{wch:14},{wch:9},{wch:13},{wch:13},{wch:14},{wch:14},{wch:10},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Detalle');
+
+  // ── Hoja 3: Curvas de nivel (si habilitado) ────────────────────
+  if(document.getElementById('cn-enable').checked){
+    var equi = _equiEfectiva();
+    var cr = calcularCrucesCotas(G.muestras, equi);
+    if(cr.length){
+      var aoa3 = [
+        ['Equidistancia (m)', equi],
+        ['Modo', document.getElementById('cn-equi').value],
+        [],
+        ['Cota (m)','Progresiva (m)','Sentido']
+      ];
+      cr.forEach(function(c){
+        aoa3.push([
+          c.cota,
+          Math.round(c.prog*100)/100,
+          c.subiendo ? 'subiendo' : 'bajando'
+        ]);
+      });
+      var ws3 = XLSX.utils.aoa_to_sheet(aoa3);
+      ws3['!cols'] = [{wch:10},{wch:14},{wch:10}];
+      XLSX.utils.book_append_sheet(wb, ws3, 'Curvas nivel');
+    }
+  }
+
+  try{
+    XLSX.writeFile(wb, G.nombre+'.xlsx');
+    sb('XLSX exportado: '+G.nombre+'.xlsx','ok');
+  }catch(e){
+    sb('Error exportando XLSX: '+e.message,'err');
+  }
+}
+
+function exportarPerfil(){
+  var canvas=document.getElementById('perfil-canvas');
+  if(!_perfilData){sb('Sin perfil para exportar','warn');return;}
+  // Componer un canvas temporal con fondo sólido (el canvas en vivo es transparente)
+  var tmp=document.createElement('canvas');
+  tmp.width=canvas.width;
+  tmp.height=canvas.height;
+  var tctx=tmp.getContext('2d');
+  tctx.fillStyle='#0d1220';
+  tctx.fillRect(0,0,tmp.width,tmp.height);
+  tctx.drawImage(canvas,0,0);
+  tmp.toBlob(function(blob){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=G.nombre+'_perfil.png';
+    a.click(); setTimeout(function(){URL.revokeObjectURL(url);},2000);
+    sb('Perfil PNG exportado','ok');
+  },'image/png');
+}
+
+function _descargar(contenido, nombre, mime){
+  var blob=new Blob([contenido],{type:mime+';charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download=nombre; a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+}
+
+</script>
+</body>
+</html>
